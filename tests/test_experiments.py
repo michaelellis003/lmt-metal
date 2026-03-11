@@ -1,9 +1,16 @@
 """Tests for experiment framework."""
 
+import pytest
+
 from lmxlab.experiments.analysis import (
     compare_experiments,
     compute_statistics,
     simplicity_score,
+)
+from lmxlab.experiments.gpu_bridge import (
+    ARCH_FACTORIES,
+    collect_result,
+    config_to_job_spec,
 )
 from lmxlab.experiments.runner import ExperimentConfig, ExperimentRunner
 from lmxlab.experiments.sweep import grid_sweep, random_sweep
@@ -301,3 +308,58 @@ class TestAnalysis:
             baseline_metric=2.0,
         )
         assert score2 < 0
+
+
+class TestGpuBridge:
+    """Tests for gpu_bridge module (pure-Python parts only)."""
+
+    def test_arch_factories_all_present(self):
+        expected = {"gpt", "llama", "gemma", "qwen", "mixtral", "deepseek"}
+        assert set(ARCH_FACTORIES.keys()) == expected
+
+    def test_config_to_job_spec_default(self):
+        spec = config_to_job_spec("gpt")
+        assert spec["model"]["type"] == "gpt"
+        assert spec["metadata"]["arch"] == "gpt"
+        assert spec["metadata"]["framework"] == "mlx"
+        assert spec["device"] == "auto"
+        assert spec["training"]["task"] == "language_modeling"
+        assert spec["data"]["source"] == "random"
+
+    @pytest.mark.parametrize("arch", list(ARCH_FACTORIES.keys()))
+    def test_config_to_job_spec_all_archs(self, arch):
+        spec = config_to_job_spec(arch)
+        assert spec["model"]["type"] == arch
+        assert spec["model"]["config"]["vocab_size"] > 0
+        assert spec["model"]["config"]["d_model"] > 0
+        assert spec["model"]["config"]["n_heads"] > 0
+        assert spec["model"]["config"]["n_layers"] > 0
+
+    def test_config_to_job_spec_unknown_arch(self):
+        with pytest.raises(ValueError, match="Unknown arch"):
+            config_to_job_spec("nonexistent")
+
+    def test_config_to_job_spec_train_overrides(self):
+        spec = config_to_job_spec(
+            "llama",
+            train_overrides={"learning_rate": 5e-4, "batch_size": 8},
+        )
+        assert spec["training"]["learning_rate"] == 5e-4
+        assert spec["training"]["batch_size"] == 8
+
+    def test_config_to_job_spec_seed_and_budget(self):
+        spec = config_to_job_spec("gpt", seed=123, time_budget_s=600.0)
+        assert spec["metadata"]["seed"] == 123
+        assert spec["metadata"]["time_budget_s"] == 600.0
+
+    def test_submit_experiment_requires_gpu_worker(self):
+        """submit_experiment raises ImportError without gpu_worker."""
+        from lmxlab.experiments.gpu_bridge import submit_experiment
+
+        with pytest.raises(ImportError):
+            submit_experiment("gpt")
+
+    def test_collect_result_requires_gpu_worker(self):
+        """collect_result raises ImportError without gpu_worker."""
+        with pytest.raises(ImportError):
+            collect_result("fake-job-id")
