@@ -358,6 +358,7 @@ Structured experiment infrastructure for reproducible research.
 | [`run_experiment.py`](#run_experiment) | Time-budgeted experiments with logging |
 | [`sweep_learning_rate.py`](#sweep_learning_rate) | Grid and random hyperparameter sweeps |
 | [`analyze_experiments.py`](#analyze_experiments) | Statistical analysis: CI, Cohen's d, simplicity score |
+| [`compare_optimizers.py`](#compare_optimizers) | Optimizer comparison on unified memory (Exp 3) |
 
 ### run_experiment
 
@@ -386,4 +387,15 @@ Demonstrates the experiment analysis toolkit on synthetic data. Covers
 
 ```bash
 uv run python recipes/analyze_experiments.py
+```
+
+### compare_optimizers
+
+Pre-registered Experiment 3: compares AdamW, SGD+momentum, Adafactor,
+and Lion across a learning rate sweep. Tests whether unified memory
+changes which optimizer wins. Reports best-of-sweep per optimizer,
+throughput (steps/s), and evaluates three competing hypotheses.
+
+```bash
+uv run python recipes/compare_optimizers.py --seeds 3 --steps 300
 ```
