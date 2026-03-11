@@ -26,6 +26,7 @@ Example::
     logits, cache = model(tokens)
 """
 
+import mlx.core as mx
 import mlx.nn as nn
 from mlx.utils import tree_map_with_path
 
@@ -64,9 +65,31 @@ def dequantize_model(model: nn.Module) -> None:
 
     def _maybe_dequantize(_path, m):
         if isinstance(m, nn.QuantizedLinear):
-            return m.to_linear()
+            # Reconstruct float weight from quantized form
+            weight = mx.dequantize(
+                m.weight,
+                m.scales,
+                m.get("biases"),
+                m.group_size,
+                m.bits,
+            )
+            has_bias = "bias" in m
+            linear = nn.Linear(weight.shape[1], weight.shape[0], bias=has_bias)
+            linear.weight = weight
+            if has_bias:
+                linear.bias = m.bias
+            return linear
         if isinstance(m, nn.QuantizedEmbedding):
-            return m.to_embedding()
+            weight = mx.dequantize(
+                m.weight,
+                m.scales,
+                m.get("biases"),
+                m.group_size,
+                m.bits,
+            )
+            embed = nn.Embedding(weight.shape[0], weight.shape[1])
+            embed.weight = weight
+            return embed
         return m
 
     leaves = model.leaf_modules()
