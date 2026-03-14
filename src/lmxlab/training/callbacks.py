@@ -190,7 +190,7 @@ class FLOPCounter:
     def on_step_end(self, step: int, metrics: dict[str, Any]) -> None:
         """Accumulate FLOPs and check budget."""
         self.total_flops += self.flops_per_step
-        metrics['total_flops'] = self.total_flops
+        metrics["total_flops"] = self.total_flops
 
         if (
             self.flop_budget is not None
@@ -198,18 +198,15 @@ class FLOPCounter:
         ):
             self.should_stop = True
             pflops = self.total_flops / 1e15
-            print(
-                f'FLOP budget reached at step {step} '
-                f'({pflops:.3f} PFLOPs)'
-            )
+            print(f"FLOP budget reached at step {step} ({pflops:.3f} PFLOPs)")
 
         if step % self.log_interval == 0:
             elapsed = time.monotonic() - self._start_time
             if elapsed > 0:
                 tflops_sec = self.total_flops / elapsed / 1e12
                 print(
-                    f'step {step}: {tflops_sec:.2f} TFLOP/s '
-                    f'({self.total_flops:.2e} total)'
+                    f"step {step}: {tflops_sec:.2f} TFLOP/s "
+                    f"({self.total_flops:.2e} total)"
                 )
 
     def on_eval_end(self, step: int, metrics: dict[str, Any]) -> None:
@@ -222,8 +219,8 @@ class FLOPCounter:
         if elapsed > 0:
             tflops_sec = self.total_flops / elapsed / 1e12
             print(
-                f'FLOPs summary: {pflops:.4f} PFLOPs '
-                f'in {elapsed:.1f}s ({tflops_sec:.2f} TFLOP/s)'
+                f"FLOPs summary: {pflops:.4f} PFLOPs "
+                f"in {elapsed:.1f}s ({tflops_sec:.2f} TFLOP/s)"
             )
         else:
-            print(f'FLOPs summary: {pflops:.4f} PFLOPs')
+            print(f"FLOPs summary: {pflops:.4f} PFLOPs")

@@ -50,7 +50,9 @@ class MTPHead(nn.Module):
         self.hidden_norm = nn.RMSNorm(d_model)
         self.embed_norm = nn.RMSNorm(d_model)
         self.proj = nn.Linear(
-            2 * d_model, d_model, bias=False,
+            2 * d_model,
+            d_model,
+            bias=False,
         )
         self.block = ConfigurableBlock(block_config)
 
@@ -71,10 +73,13 @@ class MTPHead(nn.Module):
         Returns:
             Hidden states (batch, seq_len, d_model).
         """
-        combined = mx.concatenate([
-            self.hidden_norm(h),
-            self.embed_norm(prev_embed),
-        ], axis=-1)
+        combined = mx.concatenate(
+            [
+                self.hidden_norm(h),
+                self.embed_norm(prev_embed),
+            ],
+            axis=-1,
+        )
         projected = self.proj(combined)
         out, _ = self.block(projected, mask=mask)
         return out
@@ -115,10 +120,10 @@ class MultiTokenPrediction(nn.Module):
         # Default MTP block: lightweight attention block
         if block_config is None:
             block_config = BlockConfig(
-                attention='mha',
-                ffn='standard',
-                norm='rms_norm',
-                position='none',
+                attention="mha",
+                ffn="standard",
+                norm="rms_norm",
+                position="none",
                 d_model=d_model,
                 n_heads=max(1, model.config.block.n_heads // 2),
                 d_ff=d_model * 2,
@@ -127,8 +132,7 @@ class MultiTokenPrediction(nn.Module):
             )
 
         self.mtp_heads = [
-            MTPHead(d_model, block_config)
-            for _ in range(n_predict)
+            MTPHead(d_model, block_config) for _ in range(n_predict)
         ]
 
     def _project_logits(self, h: mx.array) -> mx.array:
@@ -162,16 +166,17 @@ class MultiTokenPrediction(nn.Module):
         """
         # Forward with hidden states
         logits, _, hidden = self.model(
-            x, return_hidden=True,
+            x,
+            return_hidden=True,
         )
 
         # Main loss (next token prediction)
         main_logits = logits[:, :-1, :]
-        main_targets = targets[:, :main_logits.shape[1]]
+        main_targets = targets[:, : main_logits.shape[1]]
         main_loss = nn.losses.cross_entropy(
             main_logits.reshape(-1, main_logits.shape[-1]),
             main_targets.reshape(-1),
-            reduction='mean',
+            reduction="mean",
         )
 
         # MTP losses for each prediction depth
@@ -185,9 +190,9 @@ class MultiTokenPrediction(nn.Module):
             h_slice = h[:, :-k, :]
 
             # Embeddings of tokens at position t+k-1
-            prev_toks = targets[:, k - 1: -1]
+            prev_toks = targets[:, k - 1 : -1]
             if prev_toks.shape[1] > h_slice.shape[1]:
-                prev_toks = prev_toks[:, :h_slice.shape[1]]
+                prev_toks = prev_toks[:, : h_slice.shape[1]]
             prev_embed = self.model.embed(prev_toks)
 
             # MTP head produces new hidden states
@@ -195,17 +200,16 @@ class MultiTokenPrediction(nn.Module):
 
             # Project to logits using shared lm_head
             mtp_logits = self._project_logits(h_mtp)
-            mtp_targets = targets[
-                :, k: k + mtp_logits.shape[1]
-            ]
+            mtp_targets = targets[:, k : k + mtp_logits.shape[1]]
 
             if mtp_targets.shape[1] > 0:
                 mtp_loss = nn.losses.cross_entropy(
                     mtp_logits.reshape(
-                        -1, mtp_logits.shape[-1],
+                        -1,
+                        mtp_logits.shape[-1],
                     ),
                     mtp_targets.reshape(-1),
-                    reduction='mean',
+                    reduction="mean",
                 )
                 mtp_losses.append(mtp_loss)
 
@@ -221,9 +225,9 @@ class MultiTokenPrediction(nn.Module):
         total_loss = main_loss + self.mtp_weight * avg_mtp_loss
 
         losses = {
-            'main_loss': main_loss,
-            'mtp_loss': avg_mtp_loss,
-            'total_loss': total_loss,
+            "main_loss": main_loss,
+            "mtp_loss": avg_mtp_loss,
+            "total_loss": total_loss,
         }
 
         return logits, losses

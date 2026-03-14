@@ -52,16 +52,10 @@ class ConfigurableBlock(nn.Module):
         self.position = position_registry.get(config.position)(config)
 
         # RoPE is passed to attention for Q/K rotation
-        self._rope = (
-            self.position if config.position == 'rope'
-            else None
-        )
+        self._rope = self.position if config.position == "rope" else None
 
         # ALiBi is applied to the attention mask
-        self._alibi = (
-            self.position if config.position == 'alibi'
-            else None
-        )
+        self._alibi = self.position if config.position == "alibi" else None
 
     def __call__(
         self,
@@ -93,18 +87,21 @@ class ConfigurableBlock(nn.Module):
         # Apply ALiBi bias to attention mask
         if self._alibi is not None:
             L = x.shape[1]
-            cache_len = (
-                mask.shape[-1] - L if mask is not None else 0
-            )
+            cache_len = mask.shape[-1] - L if mask is not None else 0
             mask = self._alibi(
-                mask=mask, seq_len=L, cache_len=cache_len,
+                mask=mask,
+                seq_len=L,
+                cache_len=cache_len,
             )
 
         # Attention sublayer
         residual = x
         h = self.attn_norm(x)
         h, new_cache = self.attention(
-            h, mask=mask, cache=cache, rope=self._rope,
+            h,
+            mask=mask,
+            cache=cache,
+            rope=self._rope,
         )
         x = residual + self.resid_dropout(h)
 
@@ -126,16 +123,19 @@ class ConfigurableBlock(nn.Module):
         # Apply ALiBi bias to attention mask
         if self._alibi is not None:
             L = x.shape[1]
-            cache_len = (
-                mask.shape[-1] - L if mask is not None else 0
-            )
+            cache_len = mask.shape[-1] - L if mask is not None else 0
             mask = self._alibi(
-                mask=mask, seq_len=L, cache_len=cache_len,
+                mask=mask,
+                seq_len=L,
+                cache_len=cache_len,
             )
 
         # Attention sublayer
         h, new_cache = self.attention(
-            x, mask=mask, cache=cache, rope=self._rope,
+            x,
+            mask=mask,
+            cache=cache,
+            rope=self._rope,
         )
         x = self.attn_norm(x + self.resid_dropout(h))
 

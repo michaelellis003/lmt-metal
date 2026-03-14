@@ -72,7 +72,10 @@ class TestMupAttentionScaling:
     def test_gqa_sp_scale(self):
         """GQA uses 1/√d_head in standard parameterization."""
         cfg = BlockConfig(
-            d_model=64, n_heads=4, n_kv_heads=2, mup=False,
+            d_model=64,
+            n_heads=4,
+            n_kv_heads=2,
+            mup=False,
         )
         attn = GQA(cfg)
         expected = (64 // 4) ** -0.5
@@ -81,7 +84,10 @@ class TestMupAttentionScaling:
     def test_gqa_mup_scale(self):
         """GQA uses 1/d_head in μP."""
         cfg = BlockConfig(
-            d_model=64, n_heads=4, n_kv_heads=2, mup=True,
+            d_model=64,
+            n_heads=4,
+            n_kv_heads=2,
+            mup=True,
         )
         attn = GQA(cfg)
         expected = (64 // 4) ** -1.0
@@ -90,8 +96,11 @@ class TestMupAttentionScaling:
     def test_sliding_window_gqa_mup_scale(self):
         """SlidingWindowGQA uses 1/d_head in μP."""
         cfg = BlockConfig(
-            d_model=64, n_heads=4, n_kv_heads=2,
-            window_size=32, mup=True,
+            d_model=64,
+            n_heads=4,
+            n_kv_heads=2,
+            window_size=32,
+            mup=True,
         )
         attn = SlidingWindowGQA(cfg)
         expected = (64 // 4) ** -1.0
@@ -108,10 +117,14 @@ class TestMupLogitScaling:
         # irrelevant with uniform inputs).
         cfg = ModelConfig(
             block=BlockConfig(
-                d_model=64, n_heads=2, d_ff=128,
-                max_seq_len=32, position='none',
+                d_model=64,
+                n_heads=2,
+                d_ff=128,
+                max_seq_len=32,
+                position="none",
             ),
-            vocab_size=32, n_layers=1,
+            vocab_size=32,
+            n_layers=1,
         )
         model = LanguageModel(cfg)
         x = mx.zeros((1, 4), dtype=mx.int32)
@@ -120,17 +133,20 @@ class TestMupLogitScaling:
         # Build same model with mup_base_width=64 (mult=1)
         cfg_mup = ModelConfig(
             block=BlockConfig(
-                d_model=64, n_heads=2, d_ff=128,
-                max_seq_len=32, mup=True, position='none',
+                d_model=64,
+                n_heads=2,
+                d_ff=128,
+                max_seq_len=32,
+                mup=True,
+                position="none",
             ),
-            vocab_size=32, n_layers=1,
+            vocab_size=32,
+            n_layers=1,
             mup_base_width=64,
         )
         model_mup = LanguageModel(cfg_mup)
         # Copy weights so outputs are comparable
-        flat_weights = mlx.utils.tree_flatten(
-            model.parameters()
-        )
+        flat_weights = mlx.utils.tree_flatten(model.parameters())
         model_mup.load_weights(flat_weights)
         logits_mup, _ = model_mup(x)
 
@@ -146,8 +162,11 @@ class TestMupLogitScaling:
 
         cfg = ModelConfig(
             block=BlockConfig(
-                d_model=target_width, n_heads=4,
-                d_ff=256, mup=True, position='none',
+                d_model=target_width,
+                n_heads=4,
+                d_ff=256,
+                mup=True,
+                position="none",
             ),
             vocab_size=32,
             n_layers=1,
@@ -161,16 +180,17 @@ class TestMupLogitScaling:
         # Build same model without μP to get unscaled logits
         cfg_sp = ModelConfig(
             block=BlockConfig(
-                d_model=target_width, n_heads=4,
-                d_ff=256, mup=False, position='none',
+                d_model=target_width,
+                n_heads=4,
+                d_ff=256,
+                mup=False,
+                position="none",
             ),
             vocab_size=32,
             n_layers=1,
         )
         model_sp = LanguageModel(cfg_sp)
-        flat_weights = mlx.utils.tree_flatten(
-            model.parameters()
-        )
+        flat_weights = mlx.utils.tree_flatten(model.parameters())
         model_sp.load_weights(flat_weights)
         logits_sp, _ = model_sp(x)
         mx.eval(logits_sp)
@@ -237,10 +257,12 @@ class TestMupOptimizer:
 
         assert embed_lr == pytest.approx(base_lr, rel=1e-2)
         assert hidden_lr == pytest.approx(
-            base_lr / width_mult, rel=1e-2,
+            base_lr / width_mult,
+            rel=1e-2,
         )
         assert embed_lr / hidden_lr == pytest.approx(
-            width_mult, rel=1e-2,
+            width_mult,
+            rel=1e-2,
         )
 
 
@@ -250,7 +272,9 @@ class TestMupFactories:
     def test_gpt_config_mup(self):
         """gpt_config with mup_base_width sets μP fields."""
         cfg = gpt_config(
-            d_model=256, n_heads=4, d_ff=512,
+            d_model=256,
+            n_heads=4,
+            d_ff=512,
             mup_base_width=64,
         )
         assert cfg.mup_base_width == 64
@@ -266,8 +290,11 @@ class TestMupFactories:
     def test_llama_config_mup(self):
         """llama_config with mup_base_width sets μP fields."""
         cfg = llama_config(
-            d_model=256, n_heads=4, n_kv_heads=2,
-            d_ff=341, mup_base_width=64,
+            d_model=256,
+            n_heads=4,
+            n_kv_heads=2,
+            d_ff=341,
+            mup_base_width=64,
         )
         assert cfg.mup_base_width == 64
         assert cfg.block.mup is True
@@ -275,7 +302,9 @@ class TestMupFactories:
     def test_llama_config_no_mup(self):
         """llama_config without mup_base_width leaves SP."""
         cfg = llama_config(
-            d_model=256, n_heads=4, n_kv_heads=2,
+            d_model=256,
+            n_heads=4,
+            n_kv_heads=2,
             d_ff=341,
         )
         assert cfg.mup_base_width is None
@@ -309,8 +338,12 @@ class TestMupWeightInit:
         # Build target model (μP, width=target)
         mx.random.seed(42)
         cfg_mup = gpt_config(
-            vocab_size=32, d_model=target_width, n_heads=4,
-            n_layers=1, d_ff=target_width * 4, max_seq_len=16,
+            vocab_size=32,
+            d_model=target_width,
+            n_heads=4,
+            n_layers=1,
+            d_ff=target_width * 4,
+            max_seq_len=16,
             mup_base_width=base_width,
         )
         model_mup = LanguageModel(cfg_mup)
@@ -318,8 +351,12 @@ class TestMupWeightInit:
         # Build SP model at same target width (no μP scaling)
         mx.random.seed(42)
         cfg_sp = gpt_config(
-            vocab_size=32, d_model=target_width, n_heads=4,
-            n_layers=1, d_ff=target_width * 4, max_seq_len=16,
+            vocab_size=32,
+            d_model=target_width,
+            n_heads=4,
+            n_layers=1,
+            d_ff=target_width * 4,
+            max_seq_len=16,
         )
         model_sp = LanguageModel(cfg_sp)
 
@@ -337,11 +374,9 @@ class TestMupWeightInit:
         ratio = mup_var / sp_var
         expected_ratio = 1.0 / width_mult
         assert ratio == pytest.approx(
-            expected_ratio, rel=0.15,
-        ), (
-            f'μP/SP variance ratio {ratio:.4f} != '
-            f'expected {expected_ratio:.4f}'
-        )
+            expected_ratio,
+            rel=0.15,
+        ), f"μP/SP variance ratio {ratio:.4f} != expected {expected_ratio:.4f}"
 
     def test_embedding_weight_unchanged_by_mup(self):
         """Embedding init is NOT scaled by μP.
@@ -351,16 +386,24 @@ class TestMupWeightInit:
         """
         mx.random.seed(42)
         cfg_sp = gpt_config(
-            vocab_size=32, d_model=128, n_heads=4,
-            n_layers=1, d_ff=512, max_seq_len=16,
+            vocab_size=32,
+            d_model=128,
+            n_heads=4,
+            n_layers=1,
+            d_ff=512,
+            max_seq_len=16,
         )
         model_sp = LanguageModel(cfg_sp)
         sp_embed = model_sp.embed.weight
 
         mx.random.seed(42)
         cfg_mup = gpt_config(
-            vocab_size=32, d_model=128, n_heads=4,
-            n_layers=1, d_ff=512, max_seq_len=16,
+            vocab_size=32,
+            d_model=128,
+            n_heads=4,
+            n_layers=1,
+            d_ff=512,
+            max_seq_len=16,
             mup_base_width=64,
         )
         model_mup = LanguageModel(cfg_mup)
@@ -369,22 +412,30 @@ class TestMupWeightInit:
         mx.eval(sp_embed, mup_embed)
         # Embedding weights should be identical
         assert mx.allclose(sp_embed, mup_embed, atol=1e-6), (
-            'μP should NOT modify embedding weights'
+            "μP should NOT modify embedding weights"
         )
 
     def test_width_mult_1_no_init_change(self):
         """At width_mult=1, init is unchanged."""
         mx.random.seed(42)
         cfg_sp = gpt_config(
-            vocab_size=32, d_model=64, n_heads=2,
-            n_layers=1, d_ff=256, max_seq_len=16,
+            vocab_size=32,
+            d_model=64,
+            n_heads=2,
+            n_layers=1,
+            d_ff=256,
+            max_seq_len=16,
         )
         model_sp = LanguageModel(cfg_sp)
 
         mx.random.seed(42)
         cfg_mup = gpt_config(
-            vocab_size=32, d_model=64, n_heads=2,
-            n_layers=1, d_ff=256, max_seq_len=16,
+            vocab_size=32,
+            d_model=64,
+            n_heads=2,
+            n_layers=1,
+            d_ff=256,
+            max_seq_len=16,
             mup_base_width=64,
         )
         model_mup = LanguageModel(cfg_mup)
@@ -393,27 +444,37 @@ class TestMupWeightInit:
         sp_flat = mlx.utils.tree_flatten(model_sp.parameters())
         mup_flat = mlx.utils.tree_flatten(model_mup.parameters())
         for (k1, v1), (k2, v2) in zip(
-            sp_flat, mup_flat, strict=True,
+            sp_flat,
+            mup_flat,
+            strict=True,
         ):
             mx.eval(v1, v2)
             assert k1 == k2
             assert mx.allclose(v1, v2, atol=1e-6), (
-                f'Weight {k1} differs at width_mult=1'
+                f"Weight {k1} differs at width_mult=1"
             )
 
     def test_ffn_weight_scaled_by_mup(self):
         """FFN weights are also scaled by 1/√width_mult."""
         mx.random.seed(42)
         cfg_sp = gpt_config(
-            vocab_size=32, d_model=128, n_heads=4,
-            n_layers=1, d_ff=512, max_seq_len=16,
+            vocab_size=32,
+            d_model=128,
+            n_heads=4,
+            n_layers=1,
+            d_ff=512,
+            max_seq_len=16,
         )
         model_sp = LanguageModel(cfg_sp)
 
         mx.random.seed(42)
         cfg_mup = gpt_config(
-            vocab_size=32, d_model=128, n_heads=4,
-            n_layers=1, d_ff=512, max_seq_len=16,
+            vocab_size=32,
+            d_model=128,
+            n_heads=4,
+            n_layers=1,
+            d_ff=512,
+            max_seq_len=16,
             mup_base_width=32,
         )
         model_mup = LanguageModel(cfg_mup)
@@ -429,7 +490,7 @@ class TestMupWeightInit:
         expected = sp_w * expected_scale
         mx.eval(expected)
         assert mx.allclose(mup_w, expected, atol=1e-6), (
-            'FFN weight not scaled correctly by μP'
+            "FFN weight not scaled correctly by μP"
         )
 
 
@@ -449,14 +510,15 @@ class TestMupAttentionScaleReference:
         for d_model, n_heads in [(64, 4), (128, 8), (256, 8)]:
             d_head = d_model // n_heads
             cfg = BlockConfig(
-                d_model=d_model, n_heads=n_heads,
+                d_model=d_model,
+                n_heads=n_heads,
             )
             attn = MHA(cfg)
             # PyTorch convention: 1/√d_head
             expected = 1.0 / math.sqrt(d_head)
             assert attn.scale == pytest.approx(expected), (
-                f'd_model={d_model}, n_heads={n_heads}: '
-                f'scale={attn.scale} != {expected}'
+                f"d_model={d_model}, n_heads={n_heads}: "
+                f"scale={attn.scale} != {expected}"
             )
 
     def test_mup_matches_microsoft_convention(self):
@@ -464,15 +526,16 @@ class TestMupAttentionScaleReference:
         for d_model, n_heads in [(64, 4), (128, 8), (256, 8)]:
             d_head = d_model // n_heads
             cfg = BlockConfig(
-                d_model=d_model, n_heads=n_heads,
+                d_model=d_model,
+                n_heads=n_heads,
                 mup=True,
             )
             attn = MHA(cfg)
             # Microsoft mup convention: 1/d_head
             expected = 1.0 / d_head
             assert attn.scale == pytest.approx(expected), (
-                f'd_model={d_model}, n_heads={n_heads}: '
-                f'scale={attn.scale} != {expected}'
+                f"d_model={d_model}, n_heads={n_heads}: "
+                f"scale={attn.scale} != {expected}"
             )
 
 
@@ -494,9 +557,11 @@ class TestMupCoordinateCheck:
 
         for width in widths:
             cfg = gpt_config(
-                vocab_size=32, d_model=width,
+                vocab_size=32,
+                d_model=width,
                 n_heads=max(2, width // 16),
-                n_layers=1, d_ff=width * 2,
+                n_layers=1,
+                d_ff=width * 2,
                 max_seq_len=16,
                 mup_base_width=base_width,
             )
@@ -512,6 +577,6 @@ class TestMupCoordinateCheck:
         ratio = norms[-1] / max(norms[0], 1e-8)
         width_ratio = widths[-1] / widths[0]  # 4.0
         assert ratio < width_ratio, (
-            f'Logit norm grew {ratio:.1f}x for {width_ratio}x '
-            f'width — μP scaling may not be working'
+            f"Logit norm grew {ratio:.1f}x for {width_ratio}x "
+            f"width — μP scaling may not be working"
         )

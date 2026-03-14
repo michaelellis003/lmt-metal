@@ -67,7 +67,8 @@ class Trainer:
             self.optimizer = optimizer
         elif model.config.mup_base_width is not None:
             self.optimizer = create_mup_optimizer(
-                config, model.config.width_mult,
+                config,
+                model.config.width_mult,
             )
         else:
             self.optimizer = create_optimizer(config)
@@ -82,7 +83,8 @@ class Trainer:
             # No accumulation: compile full step (fwd + bwd + update)
             # MultiOptimizer (μP) is incompatible with mx.compile
             can_compile = config.compile_step and not isinstance(
-                self.optimizer, optim.MultiOptimizer,
+                self.optimizer,
+                optim.MultiOptimizer,
             )
             if can_compile:
                 self._step_fn = mx.compile(
@@ -117,9 +119,7 @@ class Trainer:
             )
         else:
             flat = tree_flatten(grads)
-            grad_norm = mx.sqrt(
-                sum(mx.sum(g * g) for _, g in flat)
-            )
+            grad_norm = mx.sqrt(sum(mx.sum(g * g) for _, g in flat))
 
         self.optimizer.update(self.model, grads)
         return loss, grad_norm
@@ -150,7 +150,9 @@ class Trainer:
                 acc_grads = grads
             else:
                 acc_grads = tree_map(
-                    lambda a, b: a + b, acc_grads, grads,
+                    lambda a, b: a + b,
+                    acc_grads,
+                    grads,
                 )
 
         # Average gradients
@@ -164,9 +166,7 @@ class Trainer:
             )
         else:
             flat = tree_flatten(avg_grads)
-            grad_norm = mx.sqrt(
-                sum(mx.sum(g * g) for _, g in flat)
-            )
+            grad_norm = mx.sqrt(sum(mx.sum(g * g) for _, g in flat))
 
         self.optimizer.update(self.model, avg_grads)
         return avg_loss, grad_norm
@@ -189,7 +189,8 @@ class Trainer:
 
         # Explicit eval boundary
         mx.eval(
-            loss, grad_norm,
+            loss,
+            grad_norm,
             self.model.parameters(),
             self.optimizer.state,
         )
@@ -231,7 +232,8 @@ class Trainer:
 
         # Explicit eval boundary
         mx.eval(
-            loss, grad_norm,
+            loss,
+            grad_norm,
             self.model.parameters(),
             self.optimizer.state,
         )

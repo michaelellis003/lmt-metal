@@ -62,9 +62,7 @@ class LanguageModel(nn.Module):
         ]
 
         # Sinusoidal PE applied once at model level
-        self._sinusoidal = (
-            block_cfg.position == 'sinusoidal'
-        )
+        self._sinusoidal = block_cfg.position == "sinusoidal"
 
         # Final norm
         final_norm_cls = norm_registry.get(block_cfg.norm)
@@ -173,14 +171,15 @@ class LanguageModel(nn.Module):
         for block in self.blocks:
             flat = mlx.utils.tree_flatten(block.parameters())
             updates = [
-                (k, v * scale) for k, v in flat
+                (k, v * scale)
+                for k, v in flat
                 if v.ndim >= 2  # only weight matrices, not biases
             ]
             if updates:
                 block.load_weights(updates, strict=False)
 
         # Rescale output head if untied
-        if not self.config.tie_embeddings and hasattr(self, 'head'):
+        if not self.config.tie_embeddings and hasattr(self, "head"):
             self.head.weight = self.head.weight * scale
 
     def count_parameters(self) -> int:

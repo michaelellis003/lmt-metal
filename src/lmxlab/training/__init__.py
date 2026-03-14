@@ -48,6 +48,6 @@ __all__ = [
 try:
     from lmxlab.experiments.mlflow import MLflowCallback
 
-    __all__ += ['MLflowCallback']
+    __all__ += ["MLflowCallback"]
 except ImportError:
     pass

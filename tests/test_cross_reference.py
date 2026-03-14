@@ -31,8 +31,11 @@ class TestSwiGLUCrossReference:
     def test_swiglu_formula(self):
         """GatedFFN matches SiLU(gate(x)) * up(x) formula."""
         cfg = BlockConfig(
-            d_model=32, n_heads=2, d_ff=64,
-            ffn='gated', bias=False,
+            d_model=32,
+            n_heads=2,
+            d_ff=64,
+            ffn="gated",
+            bias=False,
         )
         ffn = GatedFFN(cfg)
         x = mx.random.normal((2, 4, 32))
@@ -52,8 +55,11 @@ class TestSwiGLUCrossReference:
     def test_standard_ffn_formula(self):
         """StandardFFN matches GELU(up(x)) formula."""
         cfg = BlockConfig(
-            d_model=32, n_heads=2, d_ff=64,
-            ffn='standard', bias=False,
+            d_model=32,
+            n_heads=2,
+            d_ff=64,
+            ffn="standard",
+            bias=False,
         )
         ffn = StandardFFN(cfg)
         x = mx.random.normal((2, 4, 32))
@@ -75,8 +81,12 @@ class TestGQACrossReference:
     def test_gqa_kv_broadcast(self):
         """GQA produces valid output with fewer KV heads."""
         cfg = BlockConfig(
-            d_model=64, n_heads=8, n_kv_heads=2,
-            d_ff=128, attention='gqa', position='none',
+            d_model=64,
+            n_heads=8,
+            n_kv_heads=2,
+            d_ff=128,
+            attention="gqa",
+            position="none",
         )
         gqa = GQA(cfg)
         x = mx.random.normal((1, 4, 64))
@@ -93,14 +103,18 @@ class TestGQACrossReference:
         """GQA with n_kv_heads == n_heads behaves like MHA."""
         mx.random.seed(42)
         cfg = BlockConfig(
-            d_model=64, n_heads=4, n_kv_heads=4,
-            d_ff=128, position='none',
+            d_model=64,
+            n_heads=4,
+            n_kv_heads=4,
+            d_ff=128,
+            position="none",
         )
         gqa = GQA(cfg)
         mha = MHA(cfg)
 
         # Copy GQA weights to MHA (same projections)
         import mlx.utils
+
         weights = mlx.utils.tree_flatten(gqa.parameters())
         mha.load_weights(weights)
 
@@ -162,34 +176,41 @@ class TestRoPECrossReference:
         """RoPE changes attention output vs no-position."""
         mx.random.seed(42)
         cfg_rope = BlockConfig(
-            d_model=64, n_heads=4, d_ff=128,
-            attention='mha', position='rope',
+            d_model=64,
+            n_heads=4,
+            d_ff=128,
+            attention="mha",
+            position="rope",
             max_seq_len=32,
         )
         cfg_none = BlockConfig(
-            d_model=64, n_heads=4, d_ff=128,
-            attention='mha', position='none',
+            d_model=64,
+            n_heads=4,
+            d_ff=128,
+            attention="mha",
+            position="none",
             max_seq_len=32,
         )
 
         model_rope = LanguageModel(
             ModelConfig(
-                block=cfg_rope, vocab_size=32,
+                block=cfg_rope,
+                vocab_size=32,
                 n_layers=1,
             )
         )
         model_none = LanguageModel(
             ModelConfig(
-                block=cfg_none, vocab_size=32,
+                block=cfg_none,
+                vocab_size=32,
                 n_layers=1,
             )
         )
 
         # Copy weights so only position encoding differs
         import mlx.utils
-        weights = mlx.utils.tree_flatten(
-            model_none.parameters()
-        )
+
+        weights = mlx.utils.tree_flatten(model_none.parameters())
         model_rope.load_weights(weights)
 
         # Use non-uniform input so position matters
@@ -206,7 +227,9 @@ class TestRoPECrossReference:
         from lmxlab.core.position import RoPE
 
         cfg = BlockConfig(
-            d_model=64, n_heads=4, d_ff=128,
+            d_model=64,
+            n_heads=4,
+            d_ff=128,
             max_seq_len=32,
         )
         rope = RoPE(cfg)
@@ -232,17 +255,25 @@ class TestSinusoidalCrossReference:
         mx.random.seed(42)
         cfg_sin = ModelConfig(
             block=BlockConfig(
-                d_model=64, n_heads=4, d_ff=128,
-                position='sinusoidal', max_seq_len=32,
+                d_model=64,
+                n_heads=4,
+                d_ff=128,
+                position="sinusoidal",
+                max_seq_len=32,
             ),
-            vocab_size=32, n_layers=1,
+            vocab_size=32,
+            n_layers=1,
         )
         cfg_none = ModelConfig(
             block=BlockConfig(
-                d_model=64, n_heads=4, d_ff=128,
-                position='none', max_seq_len=32,
+                d_model=64,
+                n_heads=4,
+                d_ff=128,
+                position="none",
+                max_seq_len=32,
             ),
-            vocab_size=32, n_layers=1,
+            vocab_size=32,
+            n_layers=1,
         )
 
         model_sin = LanguageModel(cfg_sin)
@@ -250,9 +281,8 @@ class TestSinusoidalCrossReference:
 
         # Copy weights
         import mlx.utils
-        weights = mlx.utils.tree_flatten(
-            model_none.parameters()
-        )
+
+        weights = mlx.utils.tree_flatten(model_none.parameters())
         model_sin.load_weights(weights, strict=False)
 
         x = mx.array([[0, 1, 2, 3]])
@@ -270,7 +300,10 @@ class TestAttentionScaleCrossReference:
     def test_sp_scale_matches_pytorch(self):
         """SP scale = 1/sqrt(d_head), matching PyTorch default."""
         cfg = BlockConfig(
-            d_model=64, n_heads=4, d_ff=128, mup=False,
+            d_model=64,
+            n_heads=4,
+            d_ff=128,
+            mup=False,
         )
         mha = MHA(cfg)
         d_head = 64 // 4
@@ -280,7 +313,10 @@ class TestAttentionScaleCrossReference:
     def test_mup_scale_matches_microsoft(self):
         """muP scale = 1/d_head, matching Microsoft mup."""
         cfg = BlockConfig(
-            d_model=64, n_heads=4, d_ff=128, mup=True,
+            d_model=64,
+            n_heads=4,
+            d_ff=128,
+            mup=True,
         )
         mha = MHA(cfg)
         d_head = 64 // 4
@@ -318,7 +354,9 @@ class TestDistillationCrossReference:
 
         # KL(P || P) should be zero
         kl_same = soft_target_loss(
-            teacher_logits, teacher_logits, temperature=1.0,
+            teacher_logits,
+            teacher_logits,
+            temperature=1.0,
         )
         mx.eval(kl_same)
         assert abs(kl_same.item()) < 1e-5
@@ -389,27 +427,22 @@ class TestDistillationCrossReference:
         from lmxlab.training.distillation import distillation_loss
 
         cfg = ModelConfig(
-            block=BlockConfig(
-                d_model=32, n_heads=2, d_ff=64, position='none'
-            ),
-            vocab_size=50, n_layers=1,
+            block=BlockConfig(d_model=32, n_heads=2, d_ff=64, position="none"),
+            vocab_size=50,
+            n_layers=1,
         )
         student = LanguageModel(cfg)
         teacher = LanguageModel(cfg)
         tokens = mx.array([[1, 2, 3, 4, 5]])
 
         # alpha=1.0: only KL, no CE
-        loss_alpha_1 = distillation_loss(
-            student, teacher, tokens, alpha=1.0
-        )
+        loss_alpha_1 = distillation_loss(student, teacher, tokens, alpha=1.0)
         mx.eval(loss_alpha_1)
         assert loss_alpha_1.item() > 0
 
         # alpha=0.0: only CE, no KL
         # (This tests the combined loss logic)
-        loss_alpha_0 = distillation_loss(
-            student, teacher, tokens, alpha=0.0
-        )
+        loss_alpha_0 = distillation_loss(student, teacher, tokens, alpha=0.0)
         mx.eval(loss_alpha_0)
         assert loss_alpha_0.item() > 0
 
@@ -675,9 +708,13 @@ class TestMLACrossReference:
         - DeepSeek-V2 section 3.1
         """
         cfg = BlockConfig(
-            d_model=64, n_heads=4, d_ff=128,
-            attention='mla', position='none',
-            kv_lora_rank=16, rope_dim=8,
+            d_model=64,
+            n_heads=4,
+            d_ff=128,
+            attention="mla",
+            position="none",
+            kv_lora_rank=16,
+            rope_dim=8,
         )
         mla = MLA(cfg)
         x = mx.random.normal((1, 4, 64))
@@ -707,14 +744,18 @@ class TestMLACrossReference:
         - DeepSeek-V2 equations 17-21
         """
         cfg = BlockConfig(
-            d_model=64, n_heads=4, d_ff=128,
-            attention='mla', position='none',
-            kv_lora_rank=16, rope_dim=8,
+            d_model=64,
+            n_heads=4,
+            d_ff=128,
+            attention="mla",
+            position="none",
+            kv_lora_rank=16,
+            rope_dim=8,
         )
         mla = MLA(cfg)
 
         # RoPE module should exist
-        assert hasattr(mla, '_rope')
+        assert hasattr(mla, "_rope")
         # Rope dim + nope dim = head_dim
         assert mla.rope_dim + mla.nope_dim == mla.head_dim
         assert mla.rope_dim == 8
@@ -730,9 +771,13 @@ class TestMLACrossReference:
         - DeepSeek-V2 equation 18
         """
         cfg = BlockConfig(
-            d_model=64, n_heads=4, d_ff=128,
-            attention='mla', position='none',
-            kv_lora_rank=16, rope_dim=8,
+            d_model=64,
+            n_heads=4,
+            d_ff=128,
+            attention="mla",
+            position="none",
+            kv_lora_rank=16,
+            rope_dim=8,
         )
         mla = MLA(cfg)
         x = mx.random.normal((1, 4, 64))
@@ -747,9 +792,13 @@ class TestMLACrossReference:
     def test_output_shape_matches_input(self):
         """MLA output shape equals input shape (B, L, d_model)."""
         cfg = BlockConfig(
-            d_model=64, n_heads=4, d_ff=128,
-            attention='mla', position='none',
-            kv_lora_rank=16, rope_dim=8,
+            d_model=64,
+            n_heads=4,
+            d_ff=128,
+            attention="mla",
+            position="none",
+            kv_lora_rank=16,
+            rope_dim=8,
         )
         mla = MLA(cfg)
         x = mx.random.normal((2, 8, 64))
@@ -787,10 +836,7 @@ class TestGatedDeltaNetCrossReference:
         pred = mx.sum(S * k[:, :, None, :], axis=-1)
         error = pred - v
         correction = error[:, :, :, None] * k[:, :, None, :]
-        S_new = (
-            alpha[:, :, :, None] * S
-            - beta[:, :, :, None] * correction
-        )
+        S_new = alpha[:, :, :, None] * S - beta[:, :, :, None] * correction
         mx.eval(S_new)
 
         # Verify: if S perfectly predicts v from k, error=0,
@@ -799,12 +845,9 @@ class TestGatedDeltaNetCrossReference:
         # S_perfect = v outer k / (k dot k)
         k_norm_sq = mx.sum(k * k, axis=-1, keepdims=True)
         S_perfect = (
-            v[:, :, :, None] * k[:, :, None, :]
-            / k_norm_sq[:, :, :, None]
+            v[:, :, :, None] * k[:, :, None, :] / k_norm_sq[:, :, :, None]
         )
-        pred_perfect = mx.sum(
-            S_perfect * k[:, :, None, :], axis=-1
-        )
+        pred_perfect = mx.sum(S_perfect * k[:, :, None, :], axis=-1)
         mx.eval(pred_perfect)
         # pred_perfect should equal v
         assert mx.allclose(pred_perfect, v, atol=1e-5)
@@ -820,14 +863,17 @@ class TestGatedDeltaNetCrossReference:
         - https://github.com/sustcsonglin/flash-linear-attention
         """
         cfg = BlockConfig(
-            d_model=32, n_heads=2, d_ff=64,
-            attention='gated_deltanet', position='none',
+            d_model=32,
+            n_heads=2,
+            d_ff=64,
+            attention="gated_deltanet",
+            position="none",
         )
         gdn = GatedDeltaNet(cfg)
         x = mx.random.normal((1, 4, 32))
 
         # Verify output gate projection exists
-        assert hasattr(gdn, 'out_gate_proj')
+        assert hasattr(gdn, "out_gate_proj")
 
         # Compute output gate manually: SiLU(proj(x))
         gate_expected = nn.silu(gdn.out_gate_proj(x))
@@ -848,8 +894,11 @@ class TestGatedDeltaNetCrossReference:
         - Common practice in gated architectures
         """
         cfg = BlockConfig(
-            d_model=32, n_heads=2, d_ff=64,
-            attention='gated_deltanet', position='none',
+            d_model=32,
+            n_heads=2,
+            d_ff=64,
+            attention="gated_deltanet",
+            position="none",
         )
         gdn = GatedDeltaNet(cfg)
         mx.eval(gdn.decay_proj.bias, gdn.update_proj.bias)
@@ -861,6 +910,7 @@ class TestGatedDeltaNetCrossReference:
 
         # sigmoid(-3) ~ 0.047 — nearly zero
         import math
+
         gate_val = 1 / (1 + math.exp(3))
         assert gate_val < 0.05
 
@@ -895,8 +945,11 @@ class TestGatedDeltaNetCrossReference:
         - Yang et al. ICLR 2025, section 2
         """
         cfg = BlockConfig(
-            d_model=32, n_heads=2, d_ff=64,
-            attention='gated_deltanet', position='none',
+            d_model=32,
+            n_heads=2,
+            d_ff=64,
+            attention="gated_deltanet",
+            position="none",
         )
         gdn = GatedDeltaNet(cfg)
 
@@ -930,8 +983,12 @@ class TestMoECrossReference:
         - Shazeer et al. "Outrageously Large Neural Networks"
         """
         cfg = BlockConfig(
-            d_model=32, n_heads=2, d_ff=64,
-            ffn='moe', n_experts=4, top_k_experts=2,
+            d_model=32,
+            n_heads=2,
+            d_ff=64,
+            ffn="moe",
+            n_experts=4,
+            top_k_experts=2,
         )
         moe = MoEFFN(cfg)
         x = mx.random.normal((1, 2, 32))
@@ -943,9 +1000,9 @@ class TestMoECrossReference:
 
         # Verify routing: manually check top-k softmax
         router_logits = moe.router(x)  # (1, 2, 4)
-        top_k_indices = mx.argpartition(
-            -router_logits, kth=2, axis=-1
-        )[:, :, :2]
+        top_k_indices = mx.argpartition(-router_logits, kth=2, axis=-1)[
+            :, :, :2
+        ]
         top_k_logits = mx.take_along_axis(
             router_logits, top_k_indices, axis=-1
         )
@@ -955,9 +1012,7 @@ class TestMoECrossReference:
         # Weights sum to 1 per token (softmax property)
         weight_sums = mx.sum(top_k_weights, axis=-1)
         mx.eval(weight_sums)
-        assert mx.allclose(
-            weight_sums, mx.ones_like(weight_sums), atol=1e-5
-        )
+        assert mx.allclose(weight_sums, mx.ones_like(weight_sums), atol=1e-5)
 
     def test_router_linear_no_bias(self):
         """Router is a simple linear projection without bias.
@@ -969,14 +1024,18 @@ class TestMoECrossReference:
         - Jiang et al. "Mixtral" 2024
         """
         cfg = BlockConfig(
-            d_model=32, n_heads=2, d_ff=64,
-            ffn='moe', n_experts=4, top_k_experts=2,
+            d_model=32,
+            n_heads=2,
+            d_ff=64,
+            ffn="moe",
+            n_experts=4,
+            top_k_experts=2,
         )
         moe = MoEFFN(cfg)
 
         # Router projects d_model -> n_experts
         assert moe.router.weight.shape == (4, 32)
-        assert 'bias' not in moe.router
+        assert "bias" not in moe.router
 
     def test_shared_expert_always_active(self):
         """Shared experts run on all tokens (not gated).
@@ -989,9 +1048,13 @@ class TestMoECrossReference:
         - Dai et al. "DeepSeekMoE" 2024
         """
         cfg = BlockConfig(
-            d_model=32, n_heads=2, d_ff=64,
-            ffn='shared_moe', n_experts=4,
-            top_k_experts=2, n_shared_experts=1,
+            d_model=32,
+            n_heads=2,
+            d_ff=64,
+            ffn="shared_moe",
+            n_experts=4,
+            top_k_experts=2,
+            n_shared_experts=1,
         )
         smoe = SharedExpertMoEFFN(cfg)
 
@@ -1017,14 +1080,18 @@ class TestMoECrossReference:
         - DeepSeek-V3 section 3.1.2
         """
         cfg = BlockConfig(
-            d_model=32, n_heads=2, d_ff=64,
-            ffn='shared_moe', n_experts=4,
-            top_k_experts=2, n_shared_experts=1,
+            d_model=32,
+            n_heads=2,
+            d_ff=64,
+            ffn="shared_moe",
+            n_experts=4,
+            top_k_experts=2,
+            n_shared_experts=1,
         )
         smoe = SharedExpertMoEFFN(cfg)
 
         # expert_bias exists and starts at zero
-        assert hasattr(smoe, 'expert_bias')
+        assert hasattr(smoe, "expert_bias")
         mx.eval(smoe.expert_bias)
         assert mx.allclose(
             smoe.expert_bias,
@@ -1069,13 +1136,9 @@ class TestDPOCrossReference:
         - Rafailov et al. (2023) section 4
         """
         # Positive diff -> low loss
-        pos_loss = mx.logaddexp(
-            mx.array(0.0), mx.array(-5.0)
-        )
+        pos_loss = mx.logaddexp(mx.array(0.0), mx.array(-5.0))
         # Negative diff -> high loss
-        neg_loss = mx.logaddexp(
-            mx.array(0.0), mx.array(5.0)
-        )
+        neg_loss = mx.logaddexp(mx.array(0.0), mx.array(5.0))
         mx.eval(pos_loss, neg_loss)
 
         assert pos_loss.item() < neg_loss.item()
@@ -1117,8 +1180,9 @@ class TestDPOCrossReference:
         - TorchTune DPOLoss: default beta=0.1
         """
         import inspect
+
         sig = inspect.signature(dpo_loss)
-        assert sig.parameters['beta'].default == 0.1
+        assert sig.parameters["beta"].default == 0.1
 
 
 class TestALiBiCrossReference:
@@ -1138,8 +1202,10 @@ class TestALiBiCrossReference:
 
         n_heads = 4
         cfg = BlockConfig(
-            d_model=64, n_heads=n_heads, d_ff=128,
-            position='alibi',
+            d_model=64,
+            n_heads=n_heads,
+            d_ff=128,
+            position="alibi",
         )
         alibi = ALiBi(cfg)
 
@@ -1159,12 +1225,11 @@ class TestALiBiCrossReference:
 
         # Expected: 2^(-8/4)=2^-2=0.25, 2^(-16/4)=2^-4=0.0625,
         # 2^(-24/4)=2^-6=0.015625, 2^(-32/4)=2^-8=~0.0039
-        expected = [2 ** (-8 * (i + 1) / n_heads)
-                    for i in range(n_heads)]
+        expected = [2 ** (-8 * (i + 1) / n_heads) for i in range(n_heads)]
 
         for actual, exp in zip(slopes, expected, strict=True):
             assert abs(actual - exp) < 1e-5, (
-                f'slope {actual} != expected {exp}'
+                f"slope {actual} != expected {exp}"
             )
 
     def test_bias_increases_with_distance(self):
@@ -1179,8 +1244,10 @@ class TestALiBiCrossReference:
         from lmxlab.core.position import ALiBi
 
         cfg = BlockConfig(
-            d_model=64, n_heads=4, d_ff=128,
-            position='alibi',
+            d_model=64,
+            n_heads=4,
+            d_ff=128,
+            position="alibi",
         )
         alibi = ALiBi(cfg)
         mask = _create_causal_mask(8)
@@ -1210,17 +1277,25 @@ class TestALiBiCrossReference:
         mx.random.seed(42)
         cfg_alibi = ModelConfig(
             block=BlockConfig(
-                d_model=64, n_heads=4, d_ff=128,
-                position='alibi', max_seq_len=32,
+                d_model=64,
+                n_heads=4,
+                d_ff=128,
+                position="alibi",
+                max_seq_len=32,
             ),
-            vocab_size=32, n_layers=1,
+            vocab_size=32,
+            n_layers=1,
         )
         cfg_none = ModelConfig(
             block=BlockConfig(
-                d_model=64, n_heads=4, d_ff=128,
-                position='none', max_seq_len=32,
+                d_model=64,
+                n_heads=4,
+                d_ff=128,
+                position="none",
+                max_seq_len=32,
             ),
-            vocab_size=32, n_layers=1,
+            vocab_size=32,
+            n_layers=1,
         )
 
         model_alibi = LanguageModel(cfg_alibi)
@@ -1228,9 +1303,8 @@ class TestALiBiCrossReference:
 
         # Copy weights so only position encoding differs
         import mlx.utils
-        weights = mlx.utils.tree_flatten(
-            model_none.parameters()
-        )
+
+        weights = mlx.utils.tree_flatten(model_none.parameters())
         model_alibi.load_weights(weights, strict=False)
 
         x = mx.array([[0, 1, 2, 3, 4, 5, 6, 7]])
@@ -1254,8 +1328,10 @@ class TestALiBiCrossReference:
         from lmxlab.core.block import ConfigurableBlock
 
         cfg = BlockConfig(
-            d_model=64, n_heads=4, d_ff=128,
-            position='alibi',
+            d_model=64,
+            n_heads=4,
+            d_ff=128,
+            position="alibi",
         )
         block = ConfigurableBlock(cfg)
 
@@ -1282,8 +1358,9 @@ class TestMamba2CrossReference:
 
         # exp(-e^1 * 0.1) and exp(-e^2 * 0.2)
         import math
+
         expected_0 = math.exp(-math.e * 0.1)
-        expected_1 = math.exp(-(math.e ** 2) * 0.2)
+        expected_1 = math.exp(-(math.e**2) * 0.2)
         assert abs(dA[0].item() - expected_0) < 1e-5
         assert abs(dA[1].item() - expected_1) < 1e-5
 
@@ -1299,15 +1376,14 @@ class TestMamba2CrossReference:
         dA = mx.ones((H,)) * 0.9
         dB = mx.ones((H, N)) * 0.1
 
-        S_new = (
-            dA[:, None, None] * S
-            + x[:, :, None] * dB[:, None, :]
-        )
+        S_new = dA[:, None, None] * S + x[:, :, None] * dB[:, None, :]
         mx.eval(S_new)
 
         # Each element: 0.9 * 1.0 + 2.0 * 0.1 = 1.1
         assert mx.allclose(
-            S_new, mx.ones_like(S_new) * 1.1, atol=1e-5,
+            S_new,
+            mx.ones_like(S_new) * 1.1,
+            atol=1e-5,
         )
 
     def test_output_with_d_skip(self):
@@ -1339,13 +1415,16 @@ class TestMamba2CrossReference:
         from lmxlab.core.mamba2 import Mamba2
 
         cfg = BlockConfig(
-            d_model=64, n_heads=4,
-            mamba_n_heads=4, mamba_head_dim=32,
-            ssm_state_size=16, mamba_expand=2,
+            d_model=64,
+            n_heads=4,
+            mamba_n_heads=4,
+            mamba_head_dim=32,
+            ssm_state_size=16,
+            mamba_expand=2,
         )
         mamba = Mamba2(cfg)
         # dt_bias should exist and have shape (n_heads,)
-        assert hasattr(mamba, 'dt_bias')
+        assert hasattr(mamba, "dt_bias")
         assert mamba.dt_bias.shape == (4,)
 
     def test_a_log_init(self):
@@ -1357,9 +1436,12 @@ class TestMamba2CrossReference:
         from lmxlab.core.mamba2 import Mamba2
 
         cfg = BlockConfig(
-            d_model=64, n_heads=4,
-            mamba_n_heads=4, mamba_head_dim=32,
-            ssm_state_size=16, mamba_expand=2,
+            d_model=64,
+            n_heads=4,
+            mamba_n_heads=4,
+            mamba_head_dim=32,
+            ssm_state_size=16,
+            mamba_expand=2,
         )
         mamba = Mamba2(cfg)
         mx.eval(mamba.A_log)
@@ -1378,9 +1460,12 @@ class TestMamba2CrossReference:
         from lmxlab.core.mamba2 import Mamba2
 
         cfg = BlockConfig(
-            d_model=64, n_heads=4,
-            mamba_n_heads=4, mamba_head_dim=32,
-            ssm_state_size=16, mamba_expand=2,
+            d_model=64,
+            n_heads=4,
+            mamba_n_heads=4,
+            mamba_head_dim=32,
+            ssm_state_size=16,
+            mamba_expand=2,
         )
         mamba = Mamba2(cfg)
         mx.eval(mamba.parameters())
@@ -1400,9 +1485,12 @@ class TestMamba2CrossReference:
         from lmxlab.core.mamba2 import Mamba2
 
         cfg = BlockConfig(
-            d_model=64, n_heads=4,
-            mamba_n_heads=4, mamba_head_dim=32,
-            ssm_state_size=16, mamba_expand=2,
+            d_model=64,
+            n_heads=4,
+            mamba_n_heads=4,
+            mamba_head_dim=32,
+            ssm_state_size=16,
+            mamba_expand=2,
         )
         mamba = Mamba2(cfg)
 
@@ -1442,9 +1530,9 @@ class TestReluSquaredCrossReference:
         ffn = ReluSquaredFFN(cfg)
 
         # Should have exactly 2 linear layers (up + down)
-        assert hasattr(ffn, 'up')
-        assert hasattr(ffn, 'down')
-        assert not hasattr(ffn, 'gate')
+        assert hasattr(ffn, "up")
+        assert hasattr(ffn, "down")
+        assert not hasattr(ffn, "gate")
 
     def test_gated_relu2_is_different(self):
         """GatedReluSquaredFFN has 3 matrices (SwiGLU-style).
@@ -1462,8 +1550,8 @@ class TestReluSquaredCrossReference:
         nongated = ReluSquaredFFN(cfg)
 
         # Gated has 3 projections, non-gated has 2
-        assert hasattr(gated, 'gate')
-        assert not hasattr(nongated, 'gate')
+        assert hasattr(gated, "gate")
+        assert not hasattr(nongated, "gate")
 
 
 class TestLatentMoECrossReference:
@@ -1478,9 +1566,13 @@ class TestLatentMoECrossReference:
         from lmxlab.core.moe import LatentMoEFFN
 
         cfg = BlockConfig(
-            d_model=64, n_heads=4, d_ff=128,
-            n_experts=4, top_k_experts=2,
-            moe_latent_size=32, moe_d_ff=64,
+            d_model=64,
+            n_heads=4,
+            d_ff=128,
+            n_experts=4,
+            top_k_experts=2,
+            moe_latent_size=32,
+            moe_d_ff=64,
             shared_expert_d_ff=128,
         )
         moe = LatentMoEFFN(cfg)
@@ -1498,9 +1590,13 @@ class TestLatentMoECrossReference:
         from lmxlab.core.moe import LatentMoEFFN
 
         cfg = BlockConfig(
-            d_model=64, n_heads=4, d_ff=128,
-            n_experts=4, top_k_experts=2,
-            moe_latent_size=32, moe_d_ff=64,
+            d_model=64,
+            n_heads=4,
+            d_ff=128,
+            n_experts=4,
+            top_k_experts=2,
+            moe_latent_size=32,
+            moe_d_ff=64,
             shared_expert_d_ff=128,
         )
         moe = LatentMoEFFN(cfg)
@@ -1518,9 +1614,13 @@ class TestLatentMoECrossReference:
         from lmxlab.core.moe import LatentMoEFFN
 
         cfg = BlockConfig(
-            d_model=64, n_heads=4, d_ff=128,
-            n_experts=4, top_k_experts=2,
-            moe_latent_size=32, moe_d_ff=64,
+            d_model=64,
+            n_heads=4,
+            d_ff=128,
+            n_experts=4,
+            top_k_experts=2,
+            moe_latent_size=32,
+            moe_d_ff=64,
             shared_expert_d_ff=128,
         )
         moe = LatentMoEFFN(cfg)
@@ -1548,9 +1648,13 @@ class TestLatentMoECrossReference:
         from lmxlab.core.moe import LatentMoEFFN
 
         cfg = BlockConfig(
-            d_model=64, n_heads=4, d_ff=128,
-            n_experts=4, top_k_experts=2,
-            moe_latent_size=32, moe_d_ff=64,
+            d_model=64,
+            n_heads=4,
+            d_ff=128,
+            n_experts=4,
+            top_k_experts=2,
+            moe_latent_size=32,
+            moe_d_ff=64,
             shared_expert_d_ff=128,
         )
         moe = LatentMoEFFN(cfg)
@@ -1575,10 +1679,13 @@ class TestMTPCrossReference:
 
         cfg = ModelConfig(
             block=BlockConfig(
-                d_model=32, n_heads=2, d_ff=64,
-                position='none',
+                d_model=32,
+                n_heads=2,
+                d_ff=64,
+                position="none",
             ),
-            vocab_size=64, n_layers=2,
+            vocab_size=64,
+            n_layers=2,
         )
         model = LanguageModel(cfg)
         mtp = MultiTokenPrediction(model, n_predict=2)
@@ -1586,13 +1693,13 @@ class TestMTPCrossReference:
         x = mx.random.randint(0, 64, (1, 16))
         targets = mx.random.randint(0, 64, (1, 16))
         _, losses = mtp(x, targets)
-        mx.eval(losses['total_loss'])
+        mx.eval(losses["total_loss"])
 
         # Verify chaining: the second head should receive
         # output from the first head (not backbone)
         # We can't directly test internal state, but verify
         # both heads contribute to loss
-        assert losses['mtp_loss'].item() > 0
+        assert losses["mtp_loss"].item() > 0
 
     def test_target_alignment_k1(self):
         """MTP depth k=1 predicts token at t+1.
@@ -1604,24 +1711,29 @@ class TestMTPCrossReference:
 
         cfg = ModelConfig(
             block=BlockConfig(
-                d_model=32, n_heads=2, d_ff=64,
-                position='none',
+                d_model=32,
+                n_heads=2,
+                d_ff=64,
+                position="none",
             ),
-            vocab_size=64, n_layers=2,
+            vocab_size=64,
+            n_layers=2,
         )
         model = LanguageModel(cfg)
         mtp = MultiTokenPrediction(
-            model, n_predict=1, mtp_weight=1.0,
+            model,
+            n_predict=1,
+            mtp_weight=1.0,
         )
 
         x = mx.random.randint(0, 64, (1, 8))
         targets = mx.random.randint(0, 64, (1, 8))
         logits, losses = mtp(x, targets)
-        mx.eval(logits, losses['total_loss'])
+        mx.eval(logits, losses["total_loss"])
 
         # Both main and MTP losses should be finite
-        assert mx.isfinite(losses['main_loss']).item()
-        assert mx.isfinite(losses['mtp_loss']).item()
+        assert mx.isfinite(losses["main_loss"]).item()
+        assert mx.isfinite(losses["mtp_loss"]).item()
 
     def test_shared_lm_head(self):
         """MTP heads share backbone's lm_head.
@@ -1636,10 +1748,13 @@ class TestMTPCrossReference:
 
         cfg = ModelConfig(
             block=BlockConfig(
-                d_model=32, n_heads=2, d_ff=64,
-                position='none',
+                d_model=32,
+                n_heads=2,
+                d_ff=64,
+                position="none",
             ),
-            vocab_size=64, n_layers=2,
+            vocab_size=64,
+            n_layers=2,
             tie_embeddings=True,
         )
         model = LanguageModel(cfg)
@@ -1665,15 +1780,20 @@ class TestMTPCrossReference:
 
         cfg = ModelConfig(
             block=BlockConfig(
-                d_model=32, n_heads=2, d_ff=64,
-                position='none',
+                d_model=32,
+                n_heads=2,
+                d_ff=64,
+                position="none",
             ),
-            vocab_size=64, n_layers=2,
+            vocab_size=64,
+            n_layers=2,
         )
         model = LanguageModel(cfg)
         weight = 0.3
         mtp = MultiTokenPrediction(
-            model, n_predict=2, mtp_weight=weight,
+            model,
+            n_predict=2,
+            mtp_weight=weight,
         )
 
         x = mx.random.randint(0, 64, (1, 16))
@@ -1681,13 +1801,10 @@ class TestMTPCrossReference:
         _, losses = mtp(x, targets)
         mx.eval(losses)
 
-        expected_total = (
-            losses['main_loss']
-            + weight * losses['mtp_loss']
-        )
+        expected_total = losses["main_loss"] + weight * losses["mtp_loss"]
         mx.eval(expected_total)
         assert mx.allclose(
-            losses['total_loss'],
+            losses["total_loss"],
             expected_total,
             atol=1e-5,
         )
@@ -1703,8 +1820,10 @@ class TestMTPCrossReference:
         head = MTPHead(
             d_model=32,
             block_config=BlockConfig(
-                d_model=32, n_heads=2, d_ff=64,
-                position='none',
+                d_model=32,
+                n_heads=2,
+                d_ff=64,
+                position="none",
             ),
         )
         assert isinstance(head.hidden_norm, nn.RMSNorm)
@@ -1737,16 +1856,11 @@ class TestNemotronConfigCrossReference:
         configs = cfg.block_configs
         assert configs is not None
 
-        mamba = sum(
-            1 for c in configs if c.attention == 'mamba2'
-        )
+        mamba = sum(1 for c in configs if c.attention == "mamba2")
         dense = sum(
-            1 for c in configs
-            if c.attention == 'none' and c.ffn == 'relu2'
+            1 for c in configs if c.attention == "none" and c.ffn == "relu2"
         )
-        attn = sum(
-            1 for c in configs if c.attention == 'gqa'
-        )
+        attn = sum(1 for c in configs if c.attention == "gqa")
         assert mamba == 24
         assert dense == 24
         assert attn == 4
@@ -1763,9 +1877,7 @@ class TestNemotronConfigCrossReference:
         configs = cfg.block_configs
         assert configs is not None
 
-        moe_count = sum(
-            1 for c in configs if c.ffn == 'latent_moe'
-        )
+        moe_count = sum(1 for c in configs if c.ffn == "latent_moe")
         assert moe_count == 0
 
     def test_8b_vocab_size(self):
@@ -1792,8 +1904,7 @@ class TestNemotronConfigCrossReference:
         configs = cfg.block_configs
         assert configs is not None
         dense = [
-            c for c in configs
-            if c.attention == 'none' and c.ffn == 'relu2'
+            c for c in configs if c.attention == "none" and c.ffn == "relu2"
         ]
         assert dense[0].d_ff == 21504
 
@@ -1813,11 +1924,9 @@ class TestNemotronConfigCrossReference:
         configs = cfg.block_configs
         assert configs is not None
 
-        attn_layers = [
-            c for c in configs if c.attention == 'gqa'
-        ]
+        attn_layers = [c for c in configs if c.attention == "gqa"]
         for c in attn_layers:
-            assert c.ffn == 'none'
+            assert c.ffn == "none"
 
     def test_pattern_parser_round_trip(self):
         """Pattern string produces correct layer count.
@@ -1829,19 +1938,17 @@ class TestNemotronConfigCrossReference:
             _parse_hybrid_pattern,
         )
 
-        pattern = (
-            'M-M-M-M*-'
-            'M-M-M-M-M*-'
-            'M-M-M-M-M*-'
-            'M-M-M-M-M*-'
-            'M-M-M-M-M-'
-        )
-        cfg_m = BlockConfig(attention='mamba2', ffn='none')
-        cfg_d = BlockConfig(attention='none', ffn='relu2')
-        cfg_a = BlockConfig(attention='gqa', ffn='none')
+        pattern = "M-M-M-M*-M-M-M-M-M*-M-M-M-M-M*-M-M-M-M-M*-M-M-M-M-M-"
+        cfg_m = BlockConfig(attention="mamba2", ffn="none")
+        cfg_d = BlockConfig(attention="none", ffn="relu2")
+        cfg_a = BlockConfig(attention="gqa", ffn="none")
 
         result = _parse_hybrid_pattern(
-            pattern, cfg_a, cfg_m, cfg_m, cfg_d,
+            pattern,
+            cfg_a,
+            cfg_m,
+            cfg_m,
+            cfg_d,
         )
         assert len(result) == 52
 
@@ -1859,15 +1966,10 @@ class TestWeightConversionCrossReference:
             _nemotron_weight_map,
         )
 
-        wmap = _nemotron_weight_map('M')
-        assert (
-            wmap('backbone.embeddings.weight')
-            == 'embed.weight'
-        )
+        wmap = _nemotron_weight_map("M")
+        assert wmap("backbone.embeddings.weight") == "embed.weight"
         # Old name should NOT match
-        assert (
-            wmap('backbone.embed_tokens.weight') is None
-        )
+        assert wmap("backbone.embed_tokens.weight") is None
 
     def test_nemotron_lm_head_name(self):
         """HF uses lm_head.weight.
@@ -1879,10 +1981,10 @@ class TestWeightConversionCrossReference:
             _nemotron_weight_map,
         )
 
-        wmap = _nemotron_weight_map('M')
-        assert wmap('lm_head.weight') == 'head.weight'
+        wmap = _nemotron_weight_map("M")
+        assert wmap("lm_head.weight") == "head.weight"
         # Old name should NOT match
-        assert wmap('output_head.weight') is None
+        assert wmap("output_head.weight") is None
 
     def test_nemotron_dense_uses_mixer_prefix(self):
         """Dense layers use mixer.up/down_proj (not mlp.*).
@@ -1895,18 +1997,18 @@ class TestWeightConversionCrossReference:
             _nemotron_weight_map,
         )
 
-        pattern = 'M-'  # Layer 1 is dense
+        pattern = "M-"  # Layer 1 is dense
         wmap = _nemotron_weight_map(pattern)
 
         result = wmap(
-            'backbone.layers.1.mixer.up_proj.weight',
+            "backbone.layers.1.mixer.up_proj.weight",
         )
-        assert result == 'blocks.1.ffn.up.weight'
+        assert result == "blocks.1.ffn.up.weight"
 
         result = wmap(
-            'backbone.layers.1.mixer.down_proj.weight',
+            "backbone.layers.1.mixer.down_proj.weight",
         )
-        assert result == 'blocks.1.ffn.down.weight'
+        assert result == "blocks.1.ffn.down.weight"
 
     def test_nemotron_attn_no_ffn_weights(self):
         """Attention layers have no FFN weight mappings.
@@ -1919,23 +2021,17 @@ class TestWeightConversionCrossReference:
         )
 
         # Pattern with * at position 4
-        pattern = 'M-M-*'
+        pattern = "M-M-*"
         wmap = _nemotron_weight_map(pattern)
 
         # Attention projections should map
         assert (
-            wmap('backbone.layers.4.mixer.q_proj.weight')
-            == 'blocks.4.attention.q_proj.weight'
+            wmap("backbone.layers.4.mixer.q_proj.weight")
+            == "blocks.4.attention.q_proj.weight"
         )
         # FFN weights should NOT map (return None)
-        assert (
-            wmap('backbone.layers.4.mlp.up_proj.weight')
-            is None
-        )
-        assert (
-            wmap('backbone.layers.4.post_norm.weight')
-            is None
-        )
+        assert wmap("backbone.layers.4.mlp.up_proj.weight") is None
+        assert wmap("backbone.layers.4.post_norm.weight") is None
 
     def test_nemotron_mamba_weights_complete(self):
         """Mamba layers map all SSM parameters.
@@ -1947,31 +2043,20 @@ class TestWeightConversionCrossReference:
             _nemotron_weight_map,
         )
 
-        wmap = _nemotron_weight_map('M')
+        wmap = _nemotron_weight_map("M")
         expected = {
-            'backbone.layers.0.mixer.A_log':
-                'blocks.0.attention.A_log',
-            'backbone.layers.0.mixer.D':
-                'blocks.0.attention.D',
-            'backbone.layers.0.mixer.dt_bias':
-                'blocks.0.attention.dt_bias',
-            'backbone.layers.0.mixer.in_proj.weight':
-                'blocks.0.attention.in_proj.weight',
-            'backbone.layers.0.mixer.out_proj.weight':
-                'blocks.0.attention.out_proj.weight',
-            'backbone.layers.0.mixer.conv1d.weight':
-                'blocks.0.attention.conv_weight',
-            'backbone.layers.0.mixer.conv1d.bias':
-                'blocks.0.attention.conv_bias',
-            'backbone.layers.0.mixer.norm.weight':
-                'blocks.0.attention.norm.weight',
-            'backbone.layers.0.norm.weight':
-                'blocks.0.attn_norm.weight',
+            "backbone.layers.0.mixer.A_log": "blocks.0.attention.A_log",
+            "backbone.layers.0.mixer.D": "blocks.0.attention.D",
+            "backbone.layers.0.mixer.dt_bias": "blocks.0.attention.dt_bias",
+            "backbone.layers.0.mixer.in_proj.weight": "blocks.0.attention.in_proj.weight",
+            "backbone.layers.0.mixer.out_proj.weight": "blocks.0.attention.out_proj.weight",
+            "backbone.layers.0.mixer.conv1d.weight": "blocks.0.attention.conv_weight",
+            "backbone.layers.0.mixer.conv1d.bias": "blocks.0.attention.conv_bias",
+            "backbone.layers.0.mixer.norm.weight": "blocks.0.attention.norm.weight",
+            "backbone.layers.0.norm.weight": "blocks.0.attn_norm.weight",
         }
         for hf, lmt in expected.items():
-            assert wmap(hf) == lmt, (
-                f'{hf} -> {wmap(hf)}, expected {lmt}'
-            )
+            assert wmap(hf) == lmt, f"{hf} -> {wmap(hf)}, expected {lmt}"
 
     def test_llama_weight_map_basics(self):
         """LLaMA weight map handles core parameters.
@@ -1981,29 +2066,16 @@ class TestWeightConversionCrossReference:
         """
         from lmxlab.models.convert import _llama_weight_map
 
+        assert _llama_weight_map("model.embed_tokens.weight") == "embed.weight"
+        assert _llama_weight_map("model.norm.weight") == "final_norm.weight"
+        assert _llama_weight_map("lm_head.weight") == "head.weight"
         assert (
-            _llama_weight_map('model.embed_tokens.weight')
-            == 'embed.weight'
+            _llama_weight_map("model.layers.0.self_attn.q_proj.weight")
+            == "blocks.0.attention.q_proj.weight"
         )
         assert (
-            _llama_weight_map('model.norm.weight')
-            == 'final_norm.weight'
-        )
-        assert (
-            _llama_weight_map('lm_head.weight')
-            == 'head.weight'
-        )
-        assert (
-            _llama_weight_map(
-                'model.layers.0.self_attn.q_proj.weight'
-            )
-            == 'blocks.0.attention.q_proj.weight'
-        )
-        assert (
-            _llama_weight_map(
-                'model.layers.0.mlp.gate_proj.weight'
-            )
-            == 'blocks.0.ffn.gate.weight'
+            _llama_weight_map("model.layers.0.mlp.gate_proj.weight")
+            == "blocks.0.ffn.gate.weight"
         )
 
 
@@ -2019,7 +2091,10 @@ class TestGatedReluSquaredCrossReference:
         - So et al. (2021) Primer, NeurIPS
         """
         cfg = BlockConfig(
-            d_model=32, n_heads=2, d_ff=64, bias=False,
+            d_model=32,
+            n_heads=2,
+            d_ff=64,
+            bias=False,
         )
         ffn = GatedReluSquaredFFN(cfg)
         x = mx.random.normal((2, 4, 32))
@@ -2042,7 +2117,10 @@ class TestGatedReluSquaredCrossReference:
         GatedReluSquared uses ReLU(gate)^2 * up.
         """
         cfg = BlockConfig(
-            d_model=32, n_heads=2, d_ff=64, bias=False,
+            d_model=32,
+            n_heads=2,
+            d_ff=64,
+            bias=False,
         )
         relu2 = GatedReluSquaredFFN(cfg)
         swiglu = GatedFFN(cfg)
@@ -2059,7 +2137,9 @@ class TestGatedReluSquaredCrossReference:
 
         # Outputs should differ due to activation
         assert not mx.allclose(
-            out_relu2, out_swiglu, atol=1e-3,
+            out_relu2,
+            out_swiglu,
+            atol=1e-3,
         )
 
     def test_non_gated_relu2_formula(self):
@@ -2072,7 +2152,10 @@ class TestGatedReluSquaredCrossReference:
         - nvidia/Nemotron-H relu2 activation
         """
         cfg = BlockConfig(
-            d_model=32, n_heads=2, d_ff=64, bias=False,
+            d_model=32,
+            n_heads=2,
+            d_ff=64,
+            bias=False,
         )
         ffn = ReluSquaredFFN(cfg)
         x = mx.random.normal((2, 4, 32))
@@ -2104,13 +2187,16 @@ class TestDropoutWiringCrossReference:
         from lmxlab.core.block import ConfigurableBlock
 
         cfg = BlockConfig(
-            d_model=32, n_heads=2, d_ff=64,
-            dropout=0.5, position='none',
+            d_model=32,
+            n_heads=2,
+            d_ff=64,
+            dropout=0.5,
+            position="none",
         )
         block = ConfigurableBlock(cfg)
 
         # Verify resid_dropout exists and has correct rate
-        assert hasattr(block, 'resid_dropout')
+        assert hasattr(block, "resid_dropout")
         assert isinstance(block.resid_dropout, nn.Dropout)
 
     def test_embed_dropout_exists(self):
@@ -2124,13 +2210,17 @@ class TestDropoutWiringCrossReference:
         """
         cfg = ModelConfig(
             block=BlockConfig(
-                d_model=32, n_heads=2, d_ff=64,
-                dropout=0.5, position='none',
+                d_model=32,
+                n_heads=2,
+                d_ff=64,
+                dropout=0.5,
+                position="none",
             ),
-            vocab_size=64, n_layers=2,
+            vocab_size=64,
+            n_layers=2,
         )
         model = LanguageModel(cfg)
-        assert hasattr(model, 'embed_dropout')
+        assert hasattr(model, "embed_dropout")
         assert isinstance(model.embed_dropout, nn.Dropout)
 
     def test_zero_dropout_is_identity(self):
@@ -2141,10 +2231,14 @@ class TestDropoutWiringCrossReference:
         """
         cfg = ModelConfig(
             block=BlockConfig(
-                d_model=32, n_heads=2, d_ff=64,
-                dropout=0.0, position='none',
+                d_model=32,
+                n_heads=2,
+                d_ff=64,
+                dropout=0.0,
+                position="none",
             ),
-            vocab_size=64, n_layers=2,
+            vocab_size=64,
+            n_layers=2,
         )
         model = LanguageModel(cfg)
         model.train()

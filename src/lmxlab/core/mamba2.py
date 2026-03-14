@@ -69,9 +69,14 @@ def _mamba_conv1d(
         full = mx.concatenate([conv_state, x], axis=1)
         # full is (B, K, D)
         # Depthwise conv: weight is (D, K), transpose to (K, D)
-        out = mx.sum(
-            full * weight.T[None, :, :], axis=1, keepdims=True,
-        ) + bias[None, None, :]
+        out = (
+            mx.sum(
+                full * weight.T[None, :, :],
+                axis=1,
+                keepdims=True,
+            )
+            + bias[None, None, :]
+        )
         new_state = full[:, 1:, :]
         return out, new_state
 
@@ -81,23 +86,28 @@ def _mamba_conv1d(
 
     # Sliding window conv via shifted views
     stacked = mx.stack(
-        [padded[:, i: i + L, :] for i in range(K)],
+        [padded[:, i : i + L, :] for i in range(K)],
         axis=2,
     )
     # stacked: (B, L, K, D)
     # weight: (D, K) -> (1, 1, K, D)
-    out = mx.sum(
-        stacked * weight.T[None, None, :, :], axis=2,
-    ) + bias[None, None, :]
+    out = (
+        mx.sum(
+            stacked * weight.T[None, None, :, :],
+            axis=2,
+        )
+        + bias[None, None, :]
+    )
     # out: (B, L, D)
 
     # New conv state = last K-1 positions
     if L >= K - 1:
-        new_state = x[:, -(K - 1):, :]
+        new_state = x[:, -(K - 1) :, :]
     else:
         pad_len = K - 1 - L
         new_state = mx.concatenate(
-            [mx.zeros((B, pad_len, D)), x], axis=1,
+            [mx.zeros((B, pad_len, D)), x],
+            axis=1,
         )
 
     return out, new_state
@@ -126,7 +136,8 @@ def _segsum(x: mx.array) -> mx.array:
     L = x_cumsum[..., :, None] - x_cumsum[..., None, :]
     # Causal mask: only j <= i are valid
     mask = mx.triu(
-        mx.full((T, T), -1e9), k=1,
+        mx.full((T, T), -1e9),
+        k=1,
     )
     return L + mask
 
@@ -173,16 +184,20 @@ def _ssd_chunk_scan(
     pad_len = (C_sz - seq_len % C_sz) % C_sz
     if pad_len > 0:
         x = mx.concatenate(
-            [x, mx.zeros((Bs, pad_len, H, d))], axis=1,
+            [x, mx.zeros((Bs, pad_len, H, d))],
+            axis=1,
         )
         dt = mx.concatenate(
-            [dt, mx.zeros((Bs, pad_len, H))], axis=1,
+            [dt, mx.zeros((Bs, pad_len, H))],
+            axis=1,
         )
         B = mx.concatenate(
-            [B, mx.zeros((Bs, pad_len, H, N))], axis=1,
+            [B, mx.zeros((Bs, pad_len, H, N))],
+            axis=1,
         )
         C = mx.concatenate(
-            [C, mx.zeros((Bs, pad_len, H, N))], axis=1,
+            [C, mx.zeros((Bs, pad_len, H, N))],
+            axis=1,
         )
     L_pad = x.shape[1]
     n_chunks = L_pad // C_sz
@@ -221,7 +236,8 @@ def _ssd_chunk_scan(
     # SSD dual form: Y = (C B^T * L) x_scaled
     # CB: (B, nc, H, C, C) via C @ B^T
     CB = C_t @ mx.transpose(
-        B_t, (0, 1, 2, 4, 3),
+        B_t,
+        (0, 1, 2, 4, 3),
     )  # (B,nc,H,C,C)
 
     # Element-wise multiply with decay: (CB * L)
@@ -245,7 +261,8 @@ def _ssd_chunk_scan(
     # (B, nc, H, d, N)
     # x_scaled: (B, nc, H, C, d), B_t: (B, nc, H, C, N)
     x_s_t = mx.transpose(
-        x_scaled, (0, 1, 2, 4, 3),
+        x_scaled,
+        (0, 1, 2, 4, 3),
     )  # (B, nc, H, d, C)
     chunk_contrib = x_s_t @ B_t  # (B, nc, H, d, N)
 
@@ -256,9 +273,7 @@ def _ssd_chunk_scan(
         states.append(S)
         decay_c = chunk_decay[:, c_idx, :]  # (B, H)
         contrib_c = chunk_contrib[:, c_idx, :, :, :]  # (B,H,d,N)
-        S = (
-            decay_c[:, :, None, None] * S + contrib_c
-        )
+        S = decay_c[:, :, None, None] * S + contrib_c
 
     # states: list of (B, H, d, N), stack -> (B, nc, H, d, N)
     states_stacked = mx.stack(states, axis=1)
@@ -278,7 +293,8 @@ def _ssd_chunk_scan(
     # Y_state[i] = pos_decay[i] * C[i] @ S
     # -> (B, nc, H, C, N) @ (B, nc, H, N, d) = (B,nc,H,C,d)
     S_t = mx.transpose(
-        states_stacked, (0, 1, 2, 4, 3),
+        states_stacked,
+        (0, 1, 2, 4, 3),
     )  # (B, nc, H, N, d)
     Y_state_raw = C_t @ S_t  # (B, nc, H, C, d)
     Y_state = Y_state_raw * pos_decay[:, :, :, :, None]
@@ -330,10 +346,7 @@ class Mamba2(AttentionBase):
         self.d_model = config.d_model
 
         n_heads = config.mamba_n_heads or config.n_heads
-        head_dim = (
-            config.mamba_head_dim
-            or config.d_model // n_heads
-        )
+        head_dim = config.mamba_head_dim or config.d_model // n_heads
         self.n_heads = n_heads
         self.head_dim = head_dim
         self.ssm_state_size = config.ssm_state_size
@@ -346,14 +359,14 @@ class Mamba2(AttentionBase):
         # Validate dimensions
         if self.inner_dim != n_heads * head_dim:
             raise ValueError(
-                f'inner_dim ({self.inner_dim}) != '
-                f'n_heads * head_dim ({n_heads} * {head_dim})'
+                f"inner_dim ({self.inner_dim}) != "
+                f"n_heads * head_dim ({n_heads} * {head_dim})"
             )
 
         if n_heads % self.n_groups != 0:
             raise ValueError(
-                f'n_heads ({n_heads}) must be divisible by '
-                f'n_groups ({self.n_groups})'
+                f"n_heads ({n_heads}) must be divisible by "
+                f"n_groups ({self.n_groups})"
             )
 
         # Input projection: x -> (z, x_conv_input, dt)
@@ -368,9 +381,12 @@ class Mamba2(AttentionBase):
 
         # Short causal convolution (depthwise)
         conv_d = self.inner_dim + bc_dim
-        self.conv_weight = mx.random.normal(
-            shape=(conv_d, self.conv_kernel_size),
-        ) * 0.02
+        self.conv_weight = (
+            mx.random.normal(
+                shape=(conv_d, self.conv_kernel_size),
+            )
+            * 0.02
+        )
         self.conv_bias = mx.zeros((conv_d,))
 
         # SSM parameters
@@ -399,7 +415,9 @@ class Mamba2(AttentionBase):
 
         # Output projection
         self.out_proj = nn.Linear(
-            self.inner_dim, self.d_model, bias=False,
+            self.inner_dim,
+            self.d_model,
+            bias=False,
         )
 
     def __call__(
@@ -430,13 +448,10 @@ class Mamba2(AttentionBase):
 
         # Split into components
         bc_dim = 2 * G * N
-        z = proj[:, :, :self.inner_dim]
-        x_bc = proj[
-            :, :,
-            self.inner_dim:2 * self.inner_dim + bc_dim
-        ]
+        z = proj[:, :, : self.inner_dim]
+        x_bc = proj[:, :, self.inner_dim : 2 * self.inner_dim + bc_dim]
         dt_logits = proj[
-            :, :, 2 * self.inner_dim + bc_dim:
+            :, :, 2 * self.inner_dim + bc_dim :
         ]  # (B, L, n_heads)
 
         # Parse cache
@@ -444,25 +459,31 @@ class Mamba2(AttentionBase):
             ssm_state = cache[0]
             conv_state = cache[1]
         else:
-            ssm_state = mx.zeros((
-                B, self.n_heads,
-                self.head_dim, N,
-            ))
+            ssm_state = mx.zeros(
+                (
+                    B,
+                    self.n_heads,
+                    self.head_dim,
+                    N,
+                )
+            )
             conv_state = None
 
         # Causal conv1d on x_bc
         x_bc, conv_state = _mamba_conv1d(
-            x_bc, self.conv_weight, self.conv_bias,
+            x_bc,
+            self.conv_weight,
+            self.conv_bias,
             conv_state,
         )
         x_bc = nn.silu(x_bc)
 
         # Split conv output into x_ssm, B, C
-        x_ssm = x_bc[:, :, :self.inner_dim]
-        bc_raw = x_bc[:, :, self.inner_dim:]
+        x_ssm = x_bc[:, :, : self.inner_dim]
+        bc_raw = x_bc[:, :, self.inner_dim :]
         # bc_raw: (B, L, 2 * G * N)
-        B_groups = bc_raw[:, :, :G * N]
-        C_groups = bc_raw[:, :, G * N:]
+        B_groups = bc_raw[:, :, : G * N]
+        C_groups = bc_raw[:, :, G * N :]
 
         # Reshape to (B, L, G, N)
         B_groups = B_groups.reshape(B, L, G, N)
@@ -491,7 +512,10 @@ class Mamba2(AttentionBase):
         # Reshape x_ssm for multi-head
         # (B, L, inner_dim) -> (B, L, n_heads, head_dim)
         x_ssm = x_ssm.reshape(
-            B, L, self.n_heads, self.head_dim,
+            B,
+            L,
+            self.n_heads,
+            self.head_dim,
         )
 
         # Ensure B/C have per-head shape (B, L, H, N)
@@ -508,18 +532,27 @@ class Mamba2(AttentionBase):
 
         # Dispatch: chunked SSD for long training sequences,
         # recurrent for inference (L=1) and short sequences.
-        use_chunked = (
-            self.chunk_size <= L and cache is None
-        )
+        use_chunked = self.chunk_size <= L and cache is None
 
         if use_chunked:
             out, S = _ssd_chunk_scan(
-                x_ssm, dt, A, B_mat, C_mat, D,
-                self.chunk_size, ssm_state,
+                x_ssm,
+                dt,
+                A,
+                B_mat,
+                C_mat,
+                D,
+                self.chunk_size,
+                ssm_state,
             )
         else:
             out, S = self._recurrent_scan(
-                x_ssm, dt, A, B_mat, C_mat, D,
+                x_ssm,
+                dt,
+                A,
+                B_mat,
+                C_mat,
+                D,
                 ssm_state,
             )
 
@@ -586,7 +619,8 @@ class Mamba2(AttentionBase):
 
             # Output: y = S @ C + D * x
             y_t = mx.sum(
-                S * C_t[:, :, None, :], axis=-1,
+                S * C_t[:, :, None, :],
+                axis=-1,
             )
             y_t = y_t + D[None, :, None] * x_t
             outputs.append(y_t)

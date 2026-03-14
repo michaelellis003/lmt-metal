@@ -60,7 +60,7 @@ class MHA(AttentionBase):
         self.o_proj = nn.Linear(self.d_model, self.d_model, bias=config.bias)
         # μP uses 1/d_head; SP uses 1/√d_head
         exp = -1.0 if config.mup else -0.5
-        self.scale = self.head_dim ** exp
+        self.scale = self.head_dim**exp
 
     def __call__(
         self,
@@ -80,10 +80,7 @@ class MHA(AttentionBase):
         v = v.reshape(B, L, self.n_heads, self.head_dim).transpose(0, 2, 1, 3)
 
         if rope is not None:
-            offset = (
-                cache[0].shape[2]
-                if cache is not None else 0
-            )
+            offset = cache[0].shape[2] if cache is not None else 0
             q, k = rope(q, k, offset=offset)
 
         if cache is not None:
@@ -118,7 +115,7 @@ class GQA(AttentionBase):
         self.o_proj = nn.Linear(self.d_model, self.d_model, bias=config.bias)
         # μP uses 1/d_head; SP uses 1/√d_head
         exp = -1.0 if config.mup else -0.5
-        self.scale = self.head_dim ** exp
+        self.scale = self.head_dim**exp
 
     def __call__(
         self,
@@ -142,10 +139,7 @@ class GQA(AttentionBase):
         )
 
         if rope is not None:
-            offset = (
-                cache[0].shape[2]
-                if cache is not None else 0
-            )
+            offset = cache[0].shape[2] if cache is not None else 0
             q, k = rope(q, k, offset=offset)
 
         if cache is not None:
@@ -240,7 +234,7 @@ class SlidingWindowGQA(AttentionBase):
         self.o_proj = nn.Linear(self.d_model, self.d_model, bias=config.bias)
         # μP uses 1/d_head; SP uses 1/√d_head
         exp = -1.0 if config.mup else -0.5
-        self.scale = self.head_dim ** exp
+        self.scale = self.head_dim**exp
 
     def __call__(
         self,
@@ -263,10 +257,7 @@ class SlidingWindowGQA(AttentionBase):
             0, 2, 1, 3
         )
 
-        cache_len = (
-            cache[0].shape[2]
-            if cache is not None else 0
-        )
+        cache_len = cache[0].shape[2] if cache is not None else 0
 
         if rope is not None:
             q, k = rope(q, k, offset=cache_len)

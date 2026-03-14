@@ -41,24 +41,26 @@ def _parse_hybrid_pattern(
         ValueError: If pattern contains unknown characters.
     """
     mapping: dict[str, BlockConfig] = {
-        'M': mamba_cfg, 'E': moe_cfg, '*': attn_cfg,
+        "M": mamba_cfg,
+        "E": moe_cfg,
+        "*": attn_cfg,
     }
     if dense_cfg is not None:
-        mapping['-'] = dense_cfg
+        mapping["-"] = dense_cfg
     configs = []
     for i, c in enumerate(pattern):
         if c not in mapping:
-            valid = ', '.join(sorted(mapping.keys()))
+            valid = ", ".join(sorted(mapping.keys()))
             raise ValueError(
-                f'Unknown pattern character {c!r} at '
-                f'position {i}. Expected {valid}.'
+                f"Unknown pattern character {c!r} at "
+                f"position {i}. Expected {valid}."
             )
         configs.append(mapping[c])
     return tuple(configs)
 
 
 def nemotron3_config(
-    hybrid_override_pattern: str = 'MEME*ME*',
+    hybrid_override_pattern: str = "MEME*ME*",
     vocab_size: int = 256000,
     d_model: int = 4096,
     n_heads: int = 32,
@@ -122,10 +124,10 @@ def nemotron3_config(
     # Reference: nvidia/Nemotron-H-8B layer 7 has only
     # q/k/v/o projections, no MLP weights.
     attn_cfg = BlockConfig(
-        attention='gqa',
-        ffn='none',
-        norm='rms_norm',
-        position='rope',
+        attention="gqa",
+        ffn="none",
+        norm="rms_norm",
+        position="rope",
         d_model=d_model,
         n_heads=n_heads,
         n_kv_heads=n_kv_heads,
@@ -138,10 +140,10 @@ def nemotron3_config(
 
     # MoE layers (E): no attention, LatentMoE FFN
     moe_cfg = BlockConfig(
-        attention='none',
-        ffn='latent_moe',
-        norm='rms_norm',
-        position='none',
+        attention="none",
+        ffn="latent_moe",
+        norm="rms_norm",
+        position="none",
         d_model=d_model,
         n_heads=n_heads,
         d_ff=d_ff,
@@ -159,10 +161,10 @@ def nemotron3_config(
 
     # Mamba layers (M): Mamba-2 attention, no FFN
     mamba_cfg = BlockConfig(
-        attention='mamba2',
-        ffn='none',
-        norm='rms_norm',
-        position='none',
+        attention="mamba2",
+        ffn="none",
+        norm="rms_norm",
+        position="none",
         d_model=d_model,
         n_heads=n_heads,
         bias=False,
@@ -180,10 +182,10 @@ def nemotron3_config(
     # Used in 8B model pattern where some layers have
     # dense MLP instead of MoE.
     dense_cfg = BlockConfig(
-        attention='none',
-        ffn='relu2',
-        norm='rms_norm',
-        position='none',
+        attention="none",
+        ffn="relu2",
+        norm="rms_norm",
+        position="none",
         d_model=d_model,
         n_heads=n_heads,
         d_ff=d_ff,
@@ -192,7 +194,10 @@ def nemotron3_config(
     )
 
     block_configs = _parse_hybrid_pattern(
-        hybrid_override_pattern, attn_cfg, moe_cfg, mamba_cfg,
+        hybrid_override_pattern,
+        attn_cfg,
+        moe_cfg,
+        mamba_cfg,
         dense_cfg,
     )
 
@@ -211,7 +216,7 @@ def nemotron3_tiny() -> ModelConfig:
     4 layers (MEM*), d=64, small experts.
     """
     return nemotron3_config(
-        hybrid_override_pattern='MEM*',
+        hybrid_override_pattern="MEM*",
         vocab_size=256,
         d_model=64,
         n_heads=4,
@@ -243,9 +248,9 @@ def nemotron3_super() -> ModelConfig:
     params / 12B active. Does NOT fit in 36GB.
     """
     pattern = (
-        'MEMEMEM*MEMEMEM*MEMEMEM*MEMEMEM*MEMEMEM*'
-        'MEMEMEM*MEMEMEM*MEMEMEM*MEMEMEM*MEMEMEM*'
-        'MEMEMEM*'
+        "MEMEMEM*MEMEMEM*MEMEMEM*MEMEMEM*MEMEMEM*"
+        "MEMEMEM*MEMEMEM*MEMEMEM*MEMEMEM*MEMEMEM*"
+        "MEMEMEM*"
     )
     return nemotron3_config(
         hybrid_override_pattern=pattern,
@@ -273,10 +278,7 @@ def nemotron3_nano() -> ModelConfig:
     52 layers, d=2688, 128 experts (6 active), 31.6B total
     params / 3.2B active. Does NOT fit in 36GB.
     """
-    pattern = (
-        'MEMEMEM*MEMEMEM*MEMEMEM*MEMEMEM*'
-        'MEMEMEM*MEMEMEM*MEME'
-    )
+    pattern = "MEMEMEM*MEMEMEM*MEMEMEM*MEMEMEM*MEMEMEM*MEMEMEM*MEME"
     return nemotron3_config(
         hybrid_override_pattern=pattern,
         vocab_size=256000,
@@ -304,13 +306,7 @@ def nemotron3_8b() -> ModelConfig:
     No MoE — uses dense MLPs instead.
     Reference: nvidia/Nemotron-H-8B-Base-8K config.json.
     """
-    pattern = (
-        'M-M-M-M*-'
-        'M-M-M-M-M*-'
-        'M-M-M-M-M*-'
-        'M-M-M-M-M*-'
-        'M-M-M-M-M-'
-    )
+    pattern = "M-M-M-M*-M-M-M-M-M*-M-M-M-M-M*-M-M-M-M-M*-M-M-M-M-M-"
     return nemotron3_config(
         hybrid_override_pattern=pattern,
         vocab_size=131072,

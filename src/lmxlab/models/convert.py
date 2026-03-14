@@ -133,20 +133,22 @@ def _nemotron_weight_map(
     Returns:
         Weight mapping function.
     """
+
     def _map(hf_name: str) -> str | None:
         # Embedding
-        if hf_name == 'backbone.embeddings.weight':
-            return 'embed.weight'
+        if hf_name == "backbone.embeddings.weight":
+            return "embed.weight"
         # Final norm
-        if hf_name == 'backbone.norm_f.weight':
-            return 'final_norm.weight'
+        if hf_name == "backbone.norm_f.weight":
+            return "final_norm.weight"
         # LM head
-        if hf_name == 'lm_head.weight':
-            return 'head.weight'
+        if hf_name == "lm_head.weight":
+            return "head.weight"
 
         # Layer-level parameters
         m = re.match(
-            r'backbone\.layers\.(\d+)\.(.+)', hf_name,
+            r"backbone\.layers\.(\d+)\.(.+)",
+            hf_name,
         )
         if not m:
             return None
@@ -156,8 +158,8 @@ def _nemotron_weight_map(
         rest = m.group(2)
 
         # Layer norm
-        if rest == 'norm.weight':
-            return f'blocks.{idx_str}.attn_norm.weight'
+        if rest == "norm.weight":
+            return f"blocks.{idx_str}.attn_norm.weight"
 
         # Determine layer type from pattern
         if idx >= len(pattern):
@@ -165,16 +167,16 @@ def _nemotron_weight_map(
         layer_type = pattern[idx]
 
         # M layers: Mamba-2
-        if layer_type == 'M':
+        if layer_type == "M":
             return _nemotron_mamba_map(idx_str, rest)
         # * layers: attention + relu2 FFN
-        if layer_type == '*':
+        if layer_type == "*":
             return _nemotron_attn_map(idx_str, rest)
         # E layers: LatentMoE
-        if layer_type == 'E':
+        if layer_type == "E":
             return _nemotron_moe_map(idx_str, rest)
         # - layers: dense MLP (no attention)
-        if layer_type == '-':
+        if layer_type == "-":
             return _nemotron_dense_map(idx_str, rest)
 
         return None
@@ -183,38 +185,40 @@ def _nemotron_weight_map(
 
 
 def _nemotron_mamba_map(
-    idx: str, rest: str,
+    idx: str,
+    rest: str,
 ) -> str | None:
     """Map Mamba-2 layer weights."""
     # mixer.in_proj -> attention.in_proj
-    if rest == 'mixer.in_proj.weight':
-        return f'blocks.{idx}.attention.in_proj.weight'
+    if rest == "mixer.in_proj.weight":
+        return f"blocks.{idx}.attention.in_proj.weight"
     # mixer.out_proj -> attention.out_proj
-    if rest == 'mixer.out_proj.weight':
-        return f'blocks.{idx}.attention.out_proj.weight'
+    if rest == "mixer.out_proj.weight":
+        return f"blocks.{idx}.attention.out_proj.weight"
     # mixer.conv1d.weight -> attention.conv_weight
-    if rest == 'mixer.conv1d.weight':
-        return f'blocks.{idx}.attention.conv_weight'
+    if rest == "mixer.conv1d.weight":
+        return f"blocks.{idx}.attention.conv_weight"
     # mixer.conv1d.bias -> attention.conv_bias
-    if rest == 'mixer.conv1d.bias':
-        return f'blocks.{idx}.attention.conv_bias'
+    if rest == "mixer.conv1d.bias":
+        return f"blocks.{idx}.attention.conv_bias"
     # mixer.A_log -> attention.A_log
-    if rest == 'mixer.A_log':
-        return f'blocks.{idx}.attention.A_log'
+    if rest == "mixer.A_log":
+        return f"blocks.{idx}.attention.A_log"
     # mixer.D -> attention.D
-    if rest == 'mixer.D':
-        return f'blocks.{idx}.attention.D'
+    if rest == "mixer.D":
+        return f"blocks.{idx}.attention.D"
     # mixer.dt_bias -> attention.dt_bias
-    if rest == 'mixer.dt_bias':
-        return f'blocks.{idx}.attention.dt_bias'
+    if rest == "mixer.dt_bias":
+        return f"blocks.{idx}.attention.dt_bias"
     # mixer.norm.weight -> attention.norm.weight
-    if rest == 'mixer.norm.weight':
-        return f'blocks.{idx}.attention.norm.weight'
+    if rest == "mixer.norm.weight":
+        return f"blocks.{idx}.attention.norm.weight"
     return None
 
 
 def _nemotron_attn_map(
-    idx: str, rest: str,
+    idx: str,
+    rest: str,
 ) -> str | None:
     """Map attention-only layer weights.
 
@@ -224,59 +228,58 @@ def _nemotron_attn_map(
     """
     # Attention projections
     attn_m = re.match(
-        r'mixer\.(q_proj|k_proj|v_proj|o_proj)\.(.+)',
+        r"mixer\.(q_proj|k_proj|v_proj|o_proj)\.(.+)",
         rest,
     )
     if attn_m:
         proj, param = attn_m.groups()
-        return f'blocks.{idx}.attention.{proj}.{param}'
+        return f"blocks.{idx}.attention.{proj}.{param}"
 
     return None
 
 
 def _nemotron_moe_map(
-    idx: str, rest: str,
+    idx: str,
+    rest: str,
 ) -> str | None:
     """Map LatentMoE layer weights."""
     # Router
-    if rest.startswith('mlp.router.'):
-        param = rest.split('mlp.router.', 1)[1]
-        return f'blocks.{idx}.ffn.router.{param}'
+    if rest.startswith("mlp.router."):
+        param = rest.split("mlp.router.", 1)[1]
+        return f"blocks.{idx}.ffn.router.{param}"
 
     # Down/up projections for latent space
-    if rest.startswith('mlp.down_proj.'):
-        param = rest.split('mlp.down_proj.', 1)[1]
-        return f'blocks.{idx}.ffn.down_proj.{param}'
-    if rest.startswith('mlp.up_proj.'):
-        param = rest.split('mlp.up_proj.', 1)[1]
-        return f'blocks.{idx}.ffn.up_proj.{param}'
+    if rest.startswith("mlp.down_proj."):
+        param = rest.split("mlp.down_proj.", 1)[1]
+        return f"blocks.{idx}.ffn.down_proj.{param}"
+    if rest.startswith("mlp.up_proj."):
+        param = rest.split("mlp.up_proj.", 1)[1]
+        return f"blocks.{idx}.ffn.up_proj.{param}"
 
     # Per-expert weights
     expert_m = re.match(
-        r'mlp\.experts\.(\d+)\.(.+)', rest,
+        r"mlp\.experts\.(\d+)\.(.+)",
+        rest,
     )
     if expert_m:
         e_idx, param = expert_m.groups()
-        return f'blocks.{idx}.ffn.experts.{e_idx}.{param}'
+        return f"blocks.{idx}.ffn.experts.{e_idx}.{param}"
 
     # Shared expert
-    if rest.startswith('mlp.shared_expert.'):
-        param = rest.split('mlp.shared_expert.', 1)[1]
-        return (
-            f'blocks.{idx}.ffn.shared_expert.{param}'
-        )
+    if rest.startswith("mlp.shared_expert."):
+        param = rest.split("mlp.shared_expert.", 1)[1]
+        return f"blocks.{idx}.ffn.shared_expert.{param}"
 
     # Score correction bias
-    if rest == 'mlp.score_correction_bias':
-        return (
-            f'blocks.{idx}.ffn.score_correction_bias'
-        )
+    if rest == "mlp.score_correction_bias":
+        return f"blocks.{idx}.ffn.score_correction_bias"
 
     return None
 
 
 def _nemotron_dense_map(
-    idx: str, rest: str,
+    idx: str,
+    rest: str,
 ) -> str | None:
     """Map dense MLP layer weights (no attention).
 
@@ -284,12 +287,13 @@ def _nemotron_dense_map(
     ``mixer.down_proj`` (not ``mlp.*``).
     """
     ffn_m = re.match(
-        r'mixer\.(up_proj|down_proj)\.(.+)', rest,
+        r"mixer\.(up_proj|down_proj)\.(.+)",
+        rest,
     )
     if ffn_m:
         proj, param = ffn_m.groups()
-        name_map = {'up_proj': 'up', 'down_proj': 'down'}
-        return f'blocks.{idx}.ffn.{name_map[proj]}.{param}'
+        name_map = {"up_proj": "up", "down_proj": "down"}
+        return f"blocks.{idx}.ffn.{name_map[proj]}.{param}"
     return None
 
 
@@ -328,11 +332,9 @@ def convert_weights(
         KeyError: If arch is not supported.
         ValueError: If pattern is required but not provided.
     """
-    if arch == 'nemotron_h':
+    if arch == "nemotron_h":
         if pattern is None:
-            raise ValueError(
-                "pattern is required for nemotron_h"
-            )
+            raise ValueError("pattern is required for nemotron_h")
         wmap = _nemotron_weight_map(pattern)
     elif arch in WEIGHT_MAPS:
         wmap = WEIGHT_MAPS[arch]
@@ -374,7 +376,7 @@ def config_from_hf(
     model_type = hf_config.get("model_type", "")
 
     # Nemotron-H hybrid architecture
-    if model_type == 'nemotron_h':
+    if model_type == "nemotron_h":
         return _config_from_nemotron_h(hf_config)
 
     # LLaMA-family (llama, gemma, qwen2, mistral)
@@ -434,45 +436,49 @@ def _config_from_nemotron_h(
     """
     from lmxlab.models.nemotron import nemotron3_config
 
-    pattern = hf_config.get('hybrid_override_pattern', '')
-    d_model = hf_config.get('hidden_size', 4096)
-    n_heads = hf_config.get('num_attention_heads', 32)
-    n_kv_heads = hf_config.get('num_key_value_heads', n_heads)
-    d_ff = hf_config.get('intermediate_size', 16384)
+    pattern = hf_config.get("hybrid_override_pattern", "")
+    d_model = hf_config.get("hidden_size", 4096)
+    n_heads = hf_config.get("num_attention_heads", 32)
+    n_kv_heads = hf_config.get("num_key_value_heads", n_heads)
+    d_ff = hf_config.get("intermediate_size", 16384)
 
     # Mamba-2 SSM params (flat fields in HF config)
-    mamba_n_heads = hf_config.get('mamba_num_heads', 128)
-    ssm_state_size = hf_config.get('ssm_state_size', 128)
-    mamba_expand = hf_config.get('expand', 2)
+    mamba_n_heads = hf_config.get("mamba_num_heads", 128)
+    ssm_state_size = hf_config.get("ssm_state_size", 128)
+    mamba_expand = hf_config.get("expand", 2)
     mamba_head_dim = hf_config.get(
-        'mamba_head_dim',
+        "mamba_head_dim",
         (d_model * mamba_expand) // mamba_n_heads,
     )
-    mamba_n_groups = hf_config.get('n_groups', 8)
-    mamba_chunk_size = hf_config.get('chunk_size', 128)
-    conv_kernel_size = hf_config.get('conv_kernel', 4)
+    mamba_n_groups = hf_config.get("n_groups", 8)
+    mamba_chunk_size = hf_config.get("chunk_size", 128)
+    conv_kernel_size = hf_config.get("conv_kernel", 4)
 
     # MoE params
-    n_experts = hf_config.get('num_local_experts', 64)
-    top_k_experts = hf_config.get('num_experts_per_tok', 8)
+    n_experts = hf_config.get("num_local_experts", 64)
+    top_k_experts = hf_config.get("num_experts_per_tok", 8)
     moe_latent_size = hf_config.get(
-        'moe_latent_size', 1024,
+        "moe_latent_size",
+        1024,
     )
     moe_d_ff = hf_config.get(
-        'moe_intermediate_size', 1024,
+        "moe_intermediate_size",
+        1024,
     )
     shared_expert_d_ff = hf_config.get(
-        'shared_expert_intermediate_size', d_ff,
+        "shared_expert_intermediate_size",
+        d_ff,
     )
     scaling = hf_config.get(
-        'routed_scaling_factor', 5.0,
+        "routed_scaling_factor",
+        5.0,
     )
-    moe_n_groups = hf_config.get('n_group', 8)
-    moe_topk_groups = hf_config.get('topk_group', 4)
+    moe_n_groups = hf_config.get("n_group", 8)
+    moe_topk_groups = hf_config.get("topk_group", 4)
 
     return nemotron3_config(
         hybrid_override_pattern=pattern,
-        vocab_size=hf_config.get('vocab_size', 256000),
+        vocab_size=hf_config.get("vocab_size", 256000),
         d_model=d_model,
         n_heads=n_heads,
         n_kv_heads=n_kv_heads,
@@ -492,11 +498,13 @@ def _config_from_nemotron_h(
         moe_n_groups=moe_n_groups,
         moe_topk_groups=moe_topk_groups,
         max_seq_len=hf_config.get(
-            'max_position_embeddings', 8192,
+            "max_position_embeddings",
+            8192,
         ),
-        rope_theta=hf_config.get('rope_theta', 500000.0),
+        rope_theta=hf_config.get("rope_theta", 500000.0),
         tie_embeddings=hf_config.get(
-            'tie_word_embeddings', False,
+            "tie_word_embeddings",
+            False,
         ),
         conv_kernel_size=conv_kernel_size,
     )
@@ -570,9 +578,11 @@ def load_from_hf(
     arch = hf_config["model_type"]
 
     # Convert weight names
-    pattern = hf_config.get('hybrid_override_pattern')
+    pattern = hf_config.get("hybrid_override_pattern")
     lmt_weights = convert_weights(
-        hf_weights, arch, pattern=pattern,
+        hf_weights,
+        arch,
+        pattern=pattern,
     )
 
     # Cast to target dtype

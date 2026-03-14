@@ -25,8 +25,8 @@ except ImportError:
     mlflow = None  # type: ignore[assignment]
 
 _MISSING_MSG = (
-    'mlflow is required for MLflow integration. '
-    'Install with: uv sync --extra experiments'
+    "mlflow is required for MLflow integration. "
+    "Install with: uv sync --extra experiments"
 )
 
 
@@ -90,9 +90,9 @@ class MLflowCallback:
             return
         final = history[-1]
         summary: dict[str, float] = {}
-        if 'loss' in final:
-            summary['final_loss'] = float(final['loss'])
-        summary['total_steps'] = float(len(history))
+        if "loss" in final:
+            summary["final_loss"] = float(final["loss"])
+        summary["total_steps"] = float(len(history))
         if summary:
             mlflow.log_metrics(summary)
 
@@ -132,11 +132,9 @@ class MLflowExperimentRunner:
         # mlflow-skinny doesn't ship the SQLite backend,
         # so default to file-based tracking in the output dir.
         uri = mlflow.get_tracking_uri()
-        if uri.startswith('sqlite'):
-            file_uri = (
-                'file://'
-                + str(Path(self.config.output_dir).resolve()
-                      / 'mlruns')
+        if uri.startswith("sqlite"):
+            file_uri = "file://" + str(
+                Path(self.config.output_dir).resolve() / "mlruns"
             )
             mlflow.set_tracking_uri(file_uri)
         mlflow.set_experiment(self.experiment_name)
@@ -144,12 +142,14 @@ class MLflowExperimentRunner:
             run_name=self.config.description or self.config.name,
         )
         # Log experiment-level params
-        mlflow.log_params({
-            'experiment_name': self.config.name,
-            'seed': self.config.seed,
-            'time_budget_s': self.config.time_budget_s,
-            'git_commit': self._git_commit,
-        })
+        mlflow.log_params(
+            {
+                "experiment_name": self.config.name,
+                "seed": self.config.seed,
+                "time_budget_s": self.config.time_budget_s,
+                "git_commit": self._git_commit,
+            }
+        )
         # Log extra tags
         if self.tags:
             mlflow.set_tags(self.tags)
@@ -159,7 +159,7 @@ class MLflowExperimentRunner:
         metrics: dict[str, Any],
         param_count: int = 0,
         config_dict: dict[str, Any] | None = None,
-        status: str = 'keep',
+        status: str = "keep",
     ) -> Any:
         """Finish the run: log to both results.jsonl and MLflow.
 
@@ -175,12 +175,10 @@ class MLflowExperimentRunner:
         # Log model config and param count to MLflow
         if config_dict:
             # Prefix to avoid collision with TrainConfig params
-            prefixed = {
-                f'model/{k}': v for k, v in config_dict.items()
-            }
+            prefixed = {f"model/{k}": v for k, v in config_dict.items()}
             mlflow.log_params(prefixed)
         if param_count:
-            mlflow.log_param('model/param_count', param_count)
+            mlflow.log_param("model/param_count", param_count)
 
         # Log final metrics
         mlflow_metrics: dict[str, float] = {}

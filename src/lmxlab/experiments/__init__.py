@@ -49,6 +49,6 @@ try:
         MLflowExperimentRunner,
     )
 
-    __all__ += ['MLflowCallback', 'MLflowExperimentRunner']
+    __all__ += ["MLflowCallback", "MLflowExperimentRunner"]
 except ImportError:
     pass

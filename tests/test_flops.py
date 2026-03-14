@@ -15,7 +15,7 @@ def _gpt_config():
             d_model=256,
             n_heads=8,
             d_ff=1024,
-            ffn='standard',
+            ffn="standard",
             max_seq_len=256,
         ),
         n_layers=6,
@@ -31,7 +31,7 @@ def _llama_config():
             n_heads=8,
             n_kv_heads=4,
             d_ff=683,
-            ffn='gated',
+            ffn="gated",
             max_seq_len=256,
         ),
         n_layers=6,
@@ -63,44 +63,55 @@ def test_gated_ffn_more_flops():
     """Gated FFN has more FLOPs than standard at same d_ff."""
     standard = ModelConfig(
         block=BlockConfig(
-            d_model=256, n_heads=8, d_ff=1024,
-            ffn='standard', max_seq_len=256,
+            d_model=256,
+            n_heads=8,
+            d_ff=1024,
+            ffn="standard",
+            max_seq_len=256,
         ),
         n_layers=6,
         vocab_size=32000,
     )
     gated = ModelConfig(
         block=BlockConfig(
-            d_model=256, n_heads=8, d_ff=1024,
-            ffn='gated', max_seq_len=256,
+            d_model=256,
+            n_heads=8,
+            d_ff=1024,
+            ffn="gated",
+            max_seq_len=256,
         ),
         n_layers=6,
         vocab_size=32000,
     )
-    assert estimate_flops_per_token(gated) > \
-        estimate_flops_per_token(standard)
+    assert estimate_flops_per_token(gated) > estimate_flops_per_token(standard)
 
 
 def test_gqa_fewer_flops():
     """GQA (fewer KV heads) has fewer attention FLOPs than MHA."""
     mha = ModelConfig(
         block=BlockConfig(
-            d_model=256, n_heads=8, d_ff=1024,
-            ffn='standard', max_seq_len=256,
+            d_model=256,
+            n_heads=8,
+            d_ff=1024,
+            ffn="standard",
+            max_seq_len=256,
         ),
         n_layers=6,
         vocab_size=32000,
     )
     gqa = ModelConfig(
         block=BlockConfig(
-            d_model=256, n_heads=8, n_kv_heads=2, d_ff=1024,
-            ffn='standard', max_seq_len=256,
+            d_model=256,
+            n_heads=8,
+            n_kv_heads=2,
+            d_ff=1024,
+            ffn="standard",
+            max_seq_len=256,
         ),
         n_layers=6,
         vocab_size=32000,
     )
-    assert estimate_flops_per_token(gqa) < \
-        estimate_flops_per_token(mha)
+    assert estimate_flops_per_token(gqa) < estimate_flops_per_token(mha)
 
 
 def test_step_scales_with_batch():
@@ -132,7 +143,7 @@ def test_6nd_approximation():
 
     actual = estimate_flops_per_step(cfg, batch, seq)
     ratio = actual / approx_6nd
-    assert 0.7 < ratio < 1.3, f'ratio={ratio:.2f}'
+    assert 0.7 < ratio < 1.3, f"ratio={ratio:.2f}"
 
 
 def test_flop_counter_accumulates():
@@ -145,7 +156,7 @@ def test_flop_counter_accumulates():
         counter.on_step_end(step, metrics)
 
     assert counter.total_flops == 10_000_000
-    assert metrics.get('total_flops') == 10_000_000
+    assert metrics.get("total_flops") == 10_000_000
     assert not counter.should_stop
 
 

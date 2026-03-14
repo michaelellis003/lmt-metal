@@ -64,10 +64,14 @@ class ReluSquaredFFN(FFNBase):
     def __init__(self, config: BlockConfig) -> None:
         super().__init__(config)
         self.up = nn.Linear(
-            config.d_model, config.d_ff, bias=config.bias,
+            config.d_model,
+            config.d_ff,
+            bias=config.bias,
         )
         self.down = nn.Linear(
-            config.d_ff, config.d_model, bias=config.bias,
+            config.d_ff,
+            config.d_model,
+            bias=config.bias,
         )
 
     def __call__(self, x: mx.array) -> mx.array:
@@ -89,13 +93,19 @@ class GatedReluSquaredFFN(FFNBase):
         super().__init__(config)
         d_ff = config.d_ff
         self.gate = nn.Linear(
-            config.d_model, d_ff, bias=config.bias,
+            config.d_model,
+            d_ff,
+            bias=config.bias,
         )
         self.up = nn.Linear(
-            config.d_model, d_ff, bias=config.bias,
+            config.d_model,
+            d_ff,
+            bias=config.bias,
         )
         self.down = nn.Linear(
-            d_ff, config.d_model, bias=config.bias,
+            d_ff,
+            config.d_model,
+            bias=config.bias,
         )
 
     def __call__(self, x: mx.array) -> mx.array:

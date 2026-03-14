@@ -216,14 +216,18 @@ class LatentMoEFFN(FFNBase):
 
         # Down-project to latent space for expert computation
         self.down_proj = nn.Linear(
-            config.d_model, latent, bias=False,
+            config.d_model,
+            latent,
+            bias=False,
         )
 
         # Router operates on full hidden dim (not latent).
         # Reference: NemotronHTopkRouter routes from
         # hidden_size, not moe_latent_size.
         self.router = nn.Linear(
-            config.d_model, self.n_experts, bias=False,
+            config.d_model,
+            self.n_experts,
+            bias=False,
         )
 
         # Score correction bias for aux-loss-free load
@@ -246,20 +250,19 @@ class LatentMoEFFN(FFNBase):
             bias=False,
         )
         self.experts = [
-            ReluSquaredFFN(expert_cfg)
-            for _ in range(self.n_experts)
+            ReluSquaredFFN(expert_cfg) for _ in range(self.n_experts)
         ]
 
         # Up-project expert outputs from latent to d_model
         self.up_proj = nn.Linear(
-            latent, config.d_model, bias=False,
+            latent,
+            config.d_model,
+            bias=False,
         )
 
         # Shared expert: full dimension, non-gated relu2.
         # Reference: NemotronHMLP with is_expert=False.
-        shared_d_ff = (
-            config.shared_expert_d_ff or config.d_ff
-        )
+        shared_d_ff = config.shared_expert_d_ff or config.d_ff
         shared_cfg = BlockConfig(
             d_model=config.d_model,
             d_ff=shared_d_ff,
@@ -293,17 +296,20 @@ class LatentMoEFFN(FFNBase):
             top_k_indices = self._grouped_topk(scores)
         else:
             top_k_indices = mx.argpartition(
-                -scores, kth=self.top_k, axis=-1,
-            )[:, :, :self.top_k]
+                -scores,
+                kth=self.top_k,
+                axis=-1,
+            )[:, :, : self.top_k]
 
         # Gather corrected scores for selected experts
         top_k_scores = mx.take_along_axis(
-            scores, top_k_indices, axis=-1,
+            scores,
+            top_k_indices,
+            axis=-1,
         )
         # Normalize (Nemotron 3 convention)
         top_k_weights = top_k_scores / (
-            mx.sum(top_k_scores, axis=-1, keepdims=True)
-            + 1e-20
+            mx.sum(top_k_scores, axis=-1, keepdims=True) + 1e-20
         )
 
         # Down-project to latent space for experts
@@ -313,7 +319,7 @@ class LatentMoEFFN(FFNBase):
         routed_out = mx.zeros_like(x)
         for k in range(self.top_k):
             expert_indices = top_k_indices[:, :, k]
-            weights = top_k_weights[:, :, k:k + 1]
+            weights = top_k_weights[:, :, k : k + 1]
 
             for e in range(self.n_experts):
                 mask = expert_indices == e
@@ -324,10 +330,7 @@ class LatentMoEFFN(FFNBase):
                 # Up-project to d_model
                 expert_out = self.up_proj(expert_out)
                 mask_expanded = mask[:, :, None]
-                routed_out = (
-                    routed_out
-                    + expert_out * weights * mask_expanded
-                )
+                routed_out = routed_out + expert_out * weights * mask_expanded
 
         # Scale routed output
         routed_out = routed_out * self.scaling_factor
@@ -335,7 +338,8 @@ class LatentMoEFFN(FFNBase):
         return shared_out + routed_out
 
     def _grouped_topk(
-        self, scores: mx.array,
+        self,
+        scores: mx.array,
     ) -> mx.array:
         """Select top-k experts using grouped selection.
 
@@ -358,8 +362,10 @@ class LatentMoEFFN(FFNBase):
 
         # Select top groups
         top_group_idx = mx.argpartition(
-            -group_scores, kth=self.moe_topk_groups, axis=-1,
-        )[:, :, :self.moe_topk_groups]  # (B, T, topk_g)
+            -group_scores,
+            kth=self.moe_topk_groups,
+            axis=-1,
+        )[:, :, : self.moe_topk_groups]  # (B, T, topk_g)
 
         # Build mask for selected groups
         group_mask = mx.zeros((B, T, G))
@@ -375,17 +381,23 @@ class LatentMoEFFN(FFNBase):
 
         # Expand mask to expert level: (B, T, E)
         expert_mask = mx.repeat(
-            group_mask, experts_per_group, axis=-1,
+            group_mask,
+            experts_per_group,
+            axis=-1,
         )
 
         # Mask out non-selected groups
         masked_scores = mx.where(
-            expert_mask > 0, scores, -1e9,
+            expert_mask > 0,
+            scores,
+            -1e9,
         )
 
         # Select top-k from remaining experts
         top_k_indices = mx.argpartition(
-            -masked_scores, kth=self.top_k, axis=-1,
-        )[:, :, :self.top_k]
+            -masked_scores,
+            kth=self.top_k,
+            axis=-1,
+        )[:, :, : self.top_k]
 
         return top_k_indices

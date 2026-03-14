@@ -128,7 +128,7 @@ def create_mup_optimizer(
 
     return optim.MultiOptimizer(
         optimizers=[embed_opt, hidden_opt],
-        filters=[lambda k, g: 'embed' in k],
+        filters=[lambda k, g: "embed" in k],
     )
 
 
@@ -147,23 +147,23 @@ def _create_single_optimizer(
     Returns:
         Configured optimizer.
     """
-    if name == 'adamw':
+    if name == "adamw":
         return optim.AdamW(
             learning_rate=schedule,
             weight_decay=weight_decay,
         )
-    elif name == 'lion':
+    elif name == "lion":
         return optim.Lion(
             learning_rate=schedule,
             weight_decay=weight_decay,
         )
-    elif name == 'adafactor':
+    elif name == "adafactor":
         return optim.Adafactor(learning_rate=schedule)
-    elif name == 'sgd':
+    elif name == "sgd":
         return optim.SGD(
             learning_rate=schedule,
             momentum=0.9,
             weight_decay=weight_decay,
         )
     else:
-        raise ValueError(f'Unknown optimizer: {name!r}')
+        raise ValueError(f"Unknown optimizer: {name!r}")

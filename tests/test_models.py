@@ -117,8 +117,12 @@ class TestLLaMAConfig:
     def test_dropout_param(self):
         """LLaMA config accepts and stores dropout."""
         config = llama_config(
-            vocab_size=256, d_model=64, n_heads=2,
-            n_kv_heads=2, n_layers=2, d_ff=128,
+            vocab_size=256,
+            d_model=64,
+            n_heads=2,
+            n_kv_heads=2,
+            n_layers=2,
+            d_ff=128,
             dropout=0.2,
         )
         assert config.block.dropout == 0.2
@@ -128,8 +132,12 @@ class TestDropout:
     def test_gpt_with_dropout(self):
         """GPT model runs with dropout enabled."""
         config = gpt_config(
-            vocab_size=256, d_model=64, n_heads=2,
-            n_layers=2, d_ff=128, dropout=0.1,
+            vocab_size=256,
+            d_model=64,
+            n_heads=2,
+            n_layers=2,
+            d_ff=128,
+            dropout=0.1,
         )
         model = LanguageModel(config)
         mx.eval(model.parameters())
@@ -141,8 +149,12 @@ class TestDropout:
     def test_llama_with_dropout(self):
         """LLaMA model runs with dropout enabled."""
         config = llama_config(
-            vocab_size=256, d_model=64, n_heads=4,
-            n_kv_heads=2, n_layers=2, d_ff=128,
+            vocab_size=256,
+            d_model=64,
+            n_heads=4,
+            n_kv_heads=2,
+            n_layers=2,
+            d_ff=128,
             dropout=0.2,
         )
         model = LanguageModel(config)
@@ -155,8 +167,12 @@ class TestDropout:
     def test_dropout_zero_preserves_output(self):
         """Dropout=0 is a no-op: same output in eval mode."""
         config = gpt_config(
-            vocab_size=256, d_model=64, n_heads=2,
-            n_layers=2, d_ff=128, dropout=0.0,
+            vocab_size=256,
+            d_model=64,
+            n_heads=2,
+            n_layers=2,
+            d_ff=128,
+            dropout=0.0,
         )
         model = LanguageModel(config)
         model.eval()
@@ -172,15 +188,19 @@ class TestDropout:
     def test_dropout_layers_exist(self):
         """Dropout layers are created in the model."""
         config = gpt_config(
-            vocab_size=256, d_model=64, n_heads=2,
-            n_layers=2, d_ff=128, dropout=0.2,
+            vocab_size=256,
+            d_model=64,
+            n_heads=2,
+            n_layers=2,
+            d_ff=128,
+            dropout=0.2,
         )
         model = LanguageModel(config)
         # Embedding dropout
-        assert hasattr(model, 'embed_dropout')
+        assert hasattr(model, "embed_dropout")
         # Block residual dropout
         for block in model.blocks:
-            assert hasattr(block, 'resid_dropout')
+            assert hasattr(block, "resid_dropout")
 
 
 class TestGenerate:
@@ -342,7 +362,7 @@ class TestNoneAttention:
         from lmxlab.core.attention import attention_registry
 
         cfg = BlockConfig(d_model=64, n_heads=4)
-        attn = attention_registry.get('none')(cfg)
+        attn = attention_registry.get("none")(cfg)
         x = mx.random.normal((1, 4, 64))
         mx.eval(x)
         out, cache = attn(x)
@@ -357,7 +377,7 @@ class TestNoneFFN:
         from lmxlab.core.ffn import ffn_registry
 
         cfg = BlockConfig(d_model=64, n_heads=4)
-        ffn = ffn_registry.get('none')(cfg)
+        ffn = ffn_registry.get("none")(cfg)
         x = mx.random.normal((1, 4, 64))
         mx.eval(x)
         out = ffn(x)
@@ -371,7 +391,7 @@ class TestGatedReluSquaredFFN:
         from lmxlab.core.ffn import ffn_registry
 
         cfg = BlockConfig(d_model=64, n_heads=4, d_ff=128)
-        ffn = ffn_registry.get('gated_relu2')(cfg)
+        ffn = ffn_registry.get("gated_relu2")(cfg)
         mx.eval(ffn.parameters())
         x = mx.random.normal((2, 4, 64))
         out = ffn(x)
@@ -383,9 +403,12 @@ class TestGatedReluSquaredFFN:
         from lmxlab.core.ffn import ffn_registry
 
         cfg = BlockConfig(
-            d_model=8, n_heads=1, d_ff=16, bias=False,
+            d_model=8,
+            n_heads=1,
+            d_ff=16,
+            bias=False,
         )
-        ffn = ffn_registry.get('gated_relu2')(cfg)
+        ffn = ffn_registry.get("gated_relu2")(cfg)
         mx.eval(ffn.parameters())
         x = mx.random.normal((1, 2, 8))
         out = ffn(x)
@@ -398,12 +421,16 @@ class TestMamba2:
     def test_forward_shape(self):
         """Mamba2 produces correct output shape."""
         cfg = BlockConfig(
-            d_model=64, n_heads=4,
-            mamba_n_heads=4, mamba_head_dim=32,
-            ssm_state_size=16, mamba_expand=2,
+            d_model=64,
+            n_heads=4,
+            mamba_n_heads=4,
+            mamba_head_dim=32,
+            ssm_state_size=16,
+            mamba_expand=2,
             conv_kernel_size=4,
         )
         from lmxlab.core.mamba2 import Mamba2
+
         mamba = Mamba2(cfg)
         mx.eval(mamba.parameters())
         x = mx.random.normal((2, 8, 64))
@@ -414,12 +441,16 @@ class TestMamba2:
     def test_cache_constant_size(self):
         """Mamba cache size is independent of sequence length."""
         cfg = BlockConfig(
-            d_model=64, n_heads=4,
-            mamba_n_heads=4, mamba_head_dim=32,
-            ssm_state_size=16, mamba_expand=2,
+            d_model=64,
+            n_heads=4,
+            mamba_n_heads=4,
+            mamba_head_dim=32,
+            ssm_state_size=16,
+            mamba_expand=2,
             conv_kernel_size=4,
         )
         from lmxlab.core.mamba2 import Mamba2
+
         mamba = Mamba2(cfg)
         mx.eval(mamba.parameters())
 
@@ -441,12 +472,16 @@ class TestMamba2:
     def test_autoregressive_inference(self):
         """Mamba supports single-token inference with cache."""
         cfg = BlockConfig(
-            d_model=64, n_heads=4,
-            mamba_n_heads=4, mamba_head_dim=32,
-            ssm_state_size=16, mamba_expand=2,
+            d_model=64,
+            n_heads=4,
+            mamba_n_heads=4,
+            mamba_head_dim=32,
+            ssm_state_size=16,
+            mamba_expand=2,
             conv_kernel_size=4,
         )
         from lmxlab.core.mamba2 import Mamba2
+
         mamba = Mamba2(cfg)
         mx.eval(mamba.parameters())
 
@@ -466,12 +501,17 @@ class TestLatentMoE:
     def test_output_shape(self):
         """LatentMoE produces correct output shape."""
         cfg = BlockConfig(
-            d_model=64, n_heads=4, d_ff=128,
-            n_experts=4, top_k_experts=2,
-            moe_latent_size=32, moe_d_ff=64,
+            d_model=64,
+            n_heads=4,
+            d_ff=128,
+            n_experts=4,
+            top_k_experts=2,
+            moe_latent_size=32,
+            moe_d_ff=64,
             shared_expert_d_ff=128,
         )
         from lmxlab.core.moe import LatentMoEFFN
+
         moe = LatentMoEFFN(cfg)
         mx.eval(moe.parameters())
         x = mx.random.normal((1, 4, 64))
@@ -482,12 +522,17 @@ class TestLatentMoE:
     def test_routing_weights_sum(self):
         """Sigmoid-normalized routing weights sum to 1."""
         cfg = BlockConfig(
-            d_model=64, n_heads=4, d_ff=128,
-            n_experts=4, top_k_experts=2,
-            moe_latent_size=32, moe_d_ff=64,
+            d_model=64,
+            n_heads=4,
+            d_ff=128,
+            n_experts=4,
+            top_k_experts=2,
+            moe_latent_size=32,
+            moe_d_ff=64,
             shared_expert_d_ff=128,
         )
         from lmxlab.core.moe import LatentMoEFFN
+
         moe = LatentMoEFFN(cfg)
         mx.eval(moe.parameters())
 
@@ -495,16 +540,18 @@ class TestLatentMoE:
         x = mx.random.normal((1, 4, 64))
         router_logits = moe.router(x)  # (1, 4, n_experts)
         top_k_indices = mx.argpartition(
-            -router_logits, kth=2, axis=-1,
+            -router_logits,
+            kth=2,
+            axis=-1,
         )[:, :, :2]
         top_k_logits = mx.take_along_axis(
-            router_logits, top_k_indices, axis=-1,
+            router_logits,
+            top_k_indices,
+            axis=-1,
         )
         # Sigmoid + normalize (Nemotron 3 convention)
         scores = mx.sigmoid(top_k_logits)
-        weights = scores / (
-            mx.sum(scores, axis=-1, keepdims=True) + 1e-20
-        )
+        weights = scores / (mx.sum(scores, axis=-1, keepdims=True) + 1e-20)
         mx.eval(weights)
         sums = mx.sum(weights, axis=-1)
         mx.eval(sums)
@@ -514,25 +561,29 @@ class TestLatentMoE:
 class TestHybridPattern:
     def test_parse_pattern(self):
         """Pattern parser maps characters correctly."""
-        attn = BlockConfig(attention='gqa')
-        moe = BlockConfig(attention='none', ffn='latent_moe')
-        mamba = BlockConfig(attention='mamba2', ffn='none')
+        attn = BlockConfig(attention="gqa")
+        moe = BlockConfig(attention="none", ffn="latent_moe")
+        mamba = BlockConfig(attention="mamba2", ffn="none")
 
         configs = _parse_hybrid_pattern(
-            'MEM*', attn, moe, mamba,
+            "MEM*",
+            attn,
+            moe,
+            mamba,
         )
         assert len(configs) == 4
-        assert configs[0].attention == 'mamba2'
-        assert configs[1].ffn == 'latent_moe'
-        assert configs[2].attention == 'mamba2'
-        assert configs[3].attention == 'gqa'
+        assert configs[0].attention == "mamba2"
+        assert configs[1].ffn == "latent_moe"
+        assert configs[2].attention == "mamba2"
+        assert configs[3].attention == "gqa"
 
     def test_invalid_pattern_char(self):
         """Invalid pattern character raises ValueError."""
         import pytest
+
         attn = BlockConfig()
-        with pytest.raises(ValueError, match='Unknown pattern'):
-            _parse_hybrid_pattern('MXE', attn, attn, attn)
+        with pytest.raises(ValueError, match="Unknown pattern"):
+            _parse_hybrid_pattern("MXE", attn, attn, attn)
 
 
 class TestNemotronConfig:
@@ -548,17 +599,17 @@ class TestNemotronConfig:
         cfg = nemotron3_tiny()  # pattern = 'MEM*'
         configs = cfg.block_configs
         # M layer
-        assert configs[0].attention == 'mamba2'
-        assert configs[0].ffn == 'none'
+        assert configs[0].attention == "mamba2"
+        assert configs[0].ffn == "none"
         # E layer
-        assert configs[1].attention == 'none'
-        assert configs[1].ffn == 'latent_moe'
+        assert configs[1].attention == "none"
+        assert configs[1].ffn == "latent_moe"
         # M layer
-        assert configs[2].attention == 'mamba2'
-        assert configs[2].ffn == 'none'
+        assert configs[2].attention == "mamba2"
+        assert configs[2].ffn == "none"
         # * layer (attention only, no FFN)
-        assert configs[3].attention == 'gqa'
-        assert configs[3].ffn == 'none'
+        assert configs[3].attention == "gqa"
+        assert configs[3].ffn == "none"
 
 
 class TestNemotronModel:
@@ -610,10 +661,7 @@ class TestNemotronModel:
         to_eval = [logits]
         for c in cache:
             if c is not None and isinstance(c, tuple):
-                to_eval.extend(
-                    v for v in c
-                    if isinstance(v, mx.array)
-                )
+                to_eval.extend(v for v in c if isinstance(v, mx.array))
         mx.eval(*to_eval)
 
         # Single token step
@@ -641,9 +689,12 @@ class TestMultiGroupBC:
         from lmxlab.core.mamba2 import Mamba2
 
         cfg = BlockConfig(
-            d_model=64, n_heads=4,
-            mamba_n_heads=4, mamba_head_dim=32,
-            ssm_state_size=16, mamba_expand=2,
+            d_model=64,
+            n_heads=4,
+            mamba_n_heads=4,
+            mamba_head_dim=32,
+            ssm_state_size=16,
+            mamba_expand=2,
             mamba_n_groups=1,
         )
         mamba = Mamba2(cfg)
@@ -658,9 +709,12 @@ class TestMultiGroupBC:
         from lmxlab.core.mamba2 import Mamba2
 
         cfg = BlockConfig(
-            d_model=64, n_heads=4,
-            mamba_n_heads=4, mamba_head_dim=32,
-            ssm_state_size=16, mamba_expand=2,
+            d_model=64,
+            n_heads=4,
+            mamba_n_heads=4,
+            mamba_head_dim=32,
+            ssm_state_size=16,
+            mamba_expand=2,
             mamba_n_groups=2,
         )
         mamba = Mamba2(cfg)
@@ -675,15 +729,21 @@ class TestMultiGroupBC:
         from lmxlab.core.mamba2 import Mamba2
 
         cfg1 = BlockConfig(
-            d_model=64, n_heads=4,
-            mamba_n_heads=4, mamba_head_dim=32,
-            ssm_state_size=16, mamba_expand=2,
+            d_model=64,
+            n_heads=4,
+            mamba_n_heads=4,
+            mamba_head_dim=32,
+            ssm_state_size=16,
+            mamba_expand=2,
             mamba_n_groups=1,
         )
         cfg2 = BlockConfig(
-            d_model=64, n_heads=4,
-            mamba_n_heads=4, mamba_head_dim=32,
-            ssm_state_size=16, mamba_expand=2,
+            d_model=64,
+            n_heads=4,
+            mamba_n_heads=4,
+            mamba_head_dim=32,
+            ssm_state_size=16,
+            mamba_expand=2,
             mamba_n_groups=2,
         )
         m1 = Mamba2(cfg1)
@@ -703,12 +763,15 @@ class TestMultiGroupBC:
         from lmxlab.core.mamba2 import Mamba2
 
         cfg = BlockConfig(
-            d_model=64, n_heads=4,
-            mamba_n_heads=4, mamba_head_dim=32,
-            ssm_state_size=16, mamba_expand=2,
+            d_model=64,
+            n_heads=4,
+            mamba_n_heads=4,
+            mamba_head_dim=32,
+            ssm_state_size=16,
+            mamba_expand=2,
             mamba_n_groups=3,
         )
-        with pytest.raises(ValueError, match='divisible'):
+        with pytest.raises(ValueError, match="divisible"):
             Mamba2(cfg)
 
 
@@ -720,9 +783,13 @@ class TestLatentMoEImprovements:
         from lmxlab.core.moe import LatentMoEFFN
 
         cfg = BlockConfig(
-            d_model=64, n_heads=4, d_ff=128,
-            n_experts=4, top_k_experts=2,
-            moe_latent_size=32, moe_d_ff=64,
+            d_model=64,
+            n_heads=4,
+            d_ff=128,
+            n_experts=4,
+            top_k_experts=2,
+            moe_latent_size=32,
+            moe_d_ff=64,
             shared_expert_d_ff=128,
         )
         moe = LatentMoEFFN(cfg)
@@ -738,9 +805,13 @@ class TestLatentMoEImprovements:
         from lmxlab.core.moe import LatentMoEFFN
 
         cfg = BlockConfig(
-            d_model=64, n_heads=4, d_ff=128,
-            n_experts=4, top_k_experts=2,
-            moe_latent_size=32, moe_d_ff=64,
+            d_model=64,
+            n_heads=4,
+            d_ff=128,
+            n_experts=4,
+            top_k_experts=2,
+            moe_latent_size=32,
+            moe_d_ff=64,
             shared_expert_d_ff=128,
             moe_routed_scaling_factor=5.0,
         )
@@ -757,11 +828,16 @@ class TestLatentMoEImprovements:
         from lmxlab.core.moe import LatentMoEFFN
 
         cfg = BlockConfig(
-            d_model=64, n_heads=4, d_ff=128,
-            n_experts=8, top_k_experts=2,
-            moe_latent_size=32, moe_d_ff=64,
+            d_model=64,
+            n_heads=4,
+            d_ff=128,
+            n_experts=8,
+            top_k_experts=2,
+            moe_latent_size=32,
+            moe_d_ff=64,
             shared_expert_d_ff=128,
-            moe_n_groups=2, moe_topk_groups=1,
+            moe_n_groups=2,
+            moe_topk_groups=1,
         )
         moe = LatentMoEFFN(cfg)
         mx.eval(moe.parameters())
@@ -797,10 +873,14 @@ class TestChunkedSSD:
         from lmxlab.core.mamba2 import Mamba2
 
         cfg = BlockConfig(
-            d_model=64, n_heads=4,
-            mamba_n_heads=4, mamba_head_dim=32,
-            ssm_state_size=16, mamba_expand=2,
-            mamba_n_groups=1, mamba_chunk_size=4,
+            d_model=64,
+            n_heads=4,
+            mamba_n_heads=4,
+            mamba_head_dim=32,
+            ssm_state_size=16,
+            mamba_expand=2,
+            mamba_n_groups=1,
+            mamba_chunk_size=4,
         )
         mamba = Mamba2(cfg)
         mx.eval(mamba.parameters())
@@ -822,21 +902,24 @@ class TestChunkedSSD:
         # Should be close (not exact due to floating point
         # order differences)
         assert mx.allclose(
-            out_chunked, out_recurrent, atol=1e-3,
-        ), (
-            f'Max diff: '
-            f'{mx.max(mx.abs(out_chunked - out_recurrent)).item()}'
-        )
+            out_chunked,
+            out_recurrent,
+            atol=1e-3,
+        ), f"Max diff: {mx.max(mx.abs(out_chunked - out_recurrent)).item()}"
 
     def test_non_divisible_length(self):
         """Handles seq_len not divisible by chunk_size."""
         from lmxlab.core.mamba2 import Mamba2
 
         cfg = BlockConfig(
-            d_model=64, n_heads=4,
-            mamba_n_heads=4, mamba_head_dim=32,
-            ssm_state_size=16, mamba_expand=2,
-            mamba_n_groups=1, mamba_chunk_size=4,
+            d_model=64,
+            n_heads=4,
+            mamba_n_heads=4,
+            mamba_head_dim=32,
+            ssm_state_size=16,
+            mamba_expand=2,
+            mamba_n_groups=1,
+            mamba_chunk_size=4,
         )
         mamba = Mamba2(cfg)
         mx.eval(mamba.parameters())
@@ -852,10 +935,14 @@ class TestChunkedSSD:
         from lmxlab.core.mamba2 import Mamba2
 
         cfg = BlockConfig(
-            d_model=64, n_heads=4,
-            mamba_n_heads=4, mamba_head_dim=32,
-            ssm_state_size=16, mamba_expand=2,
-            mamba_n_groups=1, mamba_chunk_size=32,
+            d_model=64,
+            n_heads=4,
+            mamba_n_heads=4,
+            mamba_head_dim=32,
+            ssm_state_size=16,
+            mamba_expand=2,
+            mamba_n_groups=1,
+            mamba_chunk_size=32,
         )
         mamba = Mamba2(cfg)
         mx.eval(mamba.parameters())
@@ -903,16 +990,21 @@ class TestMTP:
 
         cfg = ModelConfig(
             block=BlockConfig(
-                d_model=64, n_heads=4, d_ff=128,
-                position='none',
+                d_model=64,
+                n_heads=4,
+                d_ff=128,
+                position="none",
             ),
-            vocab_size=256, n_layers=2,
+            vocab_size=256,
+            n_layers=2,
         )
         model = LanguageModel(cfg)
         mx.eval(model.parameters())
 
         mtp = MultiTokenPrediction(
-            model, n_predict=2, mtp_weight=0.3,
+            model,
+            n_predict=2,
+            mtp_weight=0.3,
         )
         mx.eval(mtp.parameters())
 
@@ -922,9 +1014,9 @@ class TestMTP:
         logits, losses = mtp(x, targets)
         mx.eval(logits, losses)
         assert logits.shape == (1, 6, 256)
-        assert 'main_loss' in losses
-        assert 'mtp_loss' in losses
-        assert 'total_loss' in losses
+        assert "main_loss" in losses
+        assert "mtp_loss" in losses
+        assert "total_loss" in losses
 
     def test_mtp_loss_contribution(self):
         """MTP loss is non-zero and contributes to total."""
@@ -932,16 +1024,21 @@ class TestMTP:
 
         cfg = ModelConfig(
             block=BlockConfig(
-                d_model=64, n_heads=4, d_ff=128,
-                position='none',
+                d_model=64,
+                n_heads=4,
+                d_ff=128,
+                position="none",
             ),
-            vocab_size=256, n_layers=2,
+            vocab_size=256,
+            n_layers=2,
         )
         model = LanguageModel(cfg)
         mx.eval(model.parameters())
 
         mtp = MultiTokenPrediction(
-            model, n_predict=2, mtp_weight=0.5,
+            model,
+            n_predict=2,
+            mtp_weight=0.5,
         )
         mx.eval(mtp.parameters())
 
@@ -951,9 +1048,9 @@ class TestMTP:
         _, losses = mtp(x, targets)
         mx.eval(losses)
 
-        main = losses['main_loss'].item()
-        mtp_l = losses['mtp_loss'].item()
-        total = losses['total_loss'].item()
+        main = losses["main_loss"].item()
+        mtp_l = losses["mtp_loss"].item()
+        total = losses["total_loss"].item()
 
         assert main > 0
         assert mtp_l > 0
@@ -966,10 +1063,13 @@ class TestMTP:
 
         cfg = ModelConfig(
             block=BlockConfig(
-                d_model=64, n_heads=4, d_ff=128,
-                position='none',
+                d_model=64,
+                n_heads=4,
+                d_ff=128,
+                position="none",
             ),
-            vocab_size=256, n_layers=2,
+            vocab_size=256,
+            n_layers=2,
             tie_embeddings=False,
         )
         model = LanguageModel(cfg)
@@ -977,7 +1077,7 @@ class TestMTP:
 
         # MTP heads should not have a separate lm_head
         for head in mtp.mtp_heads:
-            assert not hasattr(head, 'head')
+            assert not hasattr(head, "head")
 
 
 class TestDensePattern:
@@ -985,19 +1085,23 @@ class TestDensePattern:
 
     def test_dash_pattern_parsing(self):
         """'-' maps to dense FFN config."""
-        attn = BlockConfig(attention='gqa')
-        moe = BlockConfig(attention='none', ffn='latent_moe')
-        mamba = BlockConfig(attention='mamba2', ffn='none')
-        dense = BlockConfig(attention='none', ffn='relu2')
+        attn = BlockConfig(attention="gqa")
+        moe = BlockConfig(attention="none", ffn="latent_moe")
+        mamba = BlockConfig(attention="mamba2", ffn="none")
+        dense = BlockConfig(attention="none", ffn="relu2")
 
         configs = _parse_hybrid_pattern(
-            'M-*', attn, moe, mamba, dense,
+            "M-*",
+            attn,
+            moe,
+            mamba,
+            dense,
         )
         assert len(configs) == 3
-        assert configs[0].attention == 'mamba2'
-        assert configs[1].attention == 'none'
-        assert configs[1].ffn == 'relu2'
-        assert configs[2].attention == 'gqa'
+        assert configs[0].attention == "mamba2"
+        assert configs[1].attention == "none"
+        assert configs[1].ffn == "relu2"
+        assert configs[2].attention == "gqa"
 
     def test_8b_config_valid(self):
         """nemotron3_8b produces a valid ModelConfig."""
@@ -1014,9 +1118,9 @@ class TestDensePattern:
         for bc in cfg.block_configs:
             types.add((bc.attention, bc.ffn))
         # Should have Mamba, dense, and attention layers
-        assert ('mamba2', 'none') in types
-        assert ('none', 'relu2') in types
-        assert ('gqa', 'none') in types
+        assert ("mamba2", "none") in types
+        assert ("none", "relu2") in types
+        assert ("gqa", "none") in types
 
 
 class TestNemotronWeightMap:
@@ -1026,43 +1130,39 @@ class TestNemotronWeightMap:
         """Maps backbone.embeddings.weight."""
         from lmxlab.models.convert import _nemotron_weight_map
 
-        wmap = _nemotron_weight_map('M*')
-        assert wmap(
-            'backbone.embeddings.weight'
-        ) == 'embed.weight'
+        wmap = _nemotron_weight_map("M*")
+        assert wmap("backbone.embeddings.weight") == "embed.weight"
 
     def test_final_norm_map(self):
         """Maps backbone.norm_f.weight."""
         from lmxlab.models.convert import _nemotron_weight_map
 
-        wmap = _nemotron_weight_map('M*')
-        assert wmap(
-            'backbone.norm_f.weight'
-        ) == 'final_norm.weight'
+        wmap = _nemotron_weight_map("M*")
+        assert wmap("backbone.norm_f.weight") == "final_norm.weight"
 
     def test_lm_head_map(self):
         """Maps lm_head.weight."""
         from lmxlab.models.convert import _nemotron_weight_map
 
-        wmap = _nemotron_weight_map('M*')
-        assert wmap(
-            'lm_head.weight'
-        ) == 'head.weight'
+        wmap = _nemotron_weight_map("M*")
+        assert wmap("lm_head.weight") == "head.weight"
 
     def test_mamba_layer_map(self):
         """Maps Mamba-2 layer weights (M)."""
         from lmxlab.models.convert import _nemotron_weight_map
 
-        wmap = _nemotron_weight_map('M*')
-        assert wmap(
-            'backbone.layers.0.mixer.in_proj.weight'
-        ) == 'blocks.0.attention.in_proj.weight'
-        assert wmap(
-            'backbone.layers.0.mixer.A_log'
-        ) == 'blocks.0.attention.A_log'
-        assert wmap(
-            'backbone.layers.0.norm.weight'
-        ) == 'blocks.0.attn_norm.weight'
+        wmap = _nemotron_weight_map("M*")
+        assert (
+            wmap("backbone.layers.0.mixer.in_proj.weight")
+            == "blocks.0.attention.in_proj.weight"
+        )
+        assert (
+            wmap("backbone.layers.0.mixer.A_log") == "blocks.0.attention.A_log"
+        )
+        assert (
+            wmap("backbone.layers.0.norm.weight")
+            == "blocks.0.attn_norm.weight"
+        )
 
     def test_attn_layer_map(self):
         """Maps attention layer weights (*).
@@ -1072,29 +1172,31 @@ class TestNemotronWeightMap:
         """
         from lmxlab.models.convert import _nemotron_weight_map
 
-        wmap = _nemotron_weight_map('M*')
-        assert wmap(
-            'backbone.layers.1.mixer.q_proj.weight'
-        ) == 'blocks.1.attention.q_proj.weight'
+        wmap = _nemotron_weight_map("M*")
+        assert (
+            wmap("backbone.layers.1.mixer.q_proj.weight")
+            == "blocks.1.attention.q_proj.weight"
+        )
         # Attention layers have no FFN weights
-        assert wmap(
-            'backbone.layers.1.mlp.up_proj.weight'
-        ) is None
+        assert wmap("backbone.layers.1.mlp.up_proj.weight") is None
 
     def test_moe_layer_map(self):
         """Maps LatentMoE layer weights (E)."""
         from lmxlab.models.convert import _nemotron_weight_map
 
-        wmap = _nemotron_weight_map('E')
-        assert wmap(
-            'backbone.layers.0.mlp.router.weight'
-        ) == 'blocks.0.ffn.router.weight'
-        assert wmap(
-            'backbone.layers.0.mlp.experts.3.up.weight'
-        ) == 'blocks.0.ffn.experts.3.up.weight'
-        assert wmap(
-            'backbone.layers.0.mlp.shared_expert.up.weight'
-        ) == 'blocks.0.ffn.shared_expert.up.weight'
+        wmap = _nemotron_weight_map("E")
+        assert (
+            wmap("backbone.layers.0.mlp.router.weight")
+            == "blocks.0.ffn.router.weight"
+        )
+        assert (
+            wmap("backbone.layers.0.mlp.experts.3.up.weight")
+            == "blocks.0.ffn.experts.3.up.weight"
+        )
+        assert (
+            wmap("backbone.layers.0.mlp.shared_expert.up.weight")
+            == "blocks.0.ffn.shared_expert.up.weight"
+        )
 
     def test_dense_layer_map(self):
         """Maps dense MLP layer weights (-).
@@ -1104,32 +1206,34 @@ class TestNemotronWeightMap:
         """
         from lmxlab.models.convert import _nemotron_weight_map
 
-        wmap = _nemotron_weight_map('-')
-        assert wmap(
-            'backbone.layers.0.mixer.up_proj.weight'
-        ) == 'blocks.0.ffn.up.weight'
-        assert wmap(
-            'backbone.layers.0.mixer.down_proj.weight'
-        ) == 'blocks.0.ffn.down.weight'
+        wmap = _nemotron_weight_map("-")
+        assert (
+            wmap("backbone.layers.0.mixer.up_proj.weight")
+            == "blocks.0.ffn.up.weight"
+        )
+        assert (
+            wmap("backbone.layers.0.mixer.down_proj.weight")
+            == "blocks.0.ffn.down.weight"
+        )
 
     def test_config_from_nemotron_h(self):
         """config_from_hf works with nemotron_h type."""
         from lmxlab.models.convert import config_from_hf
 
         hf_cfg = {
-            'model_type': 'nemotron_h',
-            'hybrid_override_pattern': 'M-M*',
-            'hidden_size': 256,
-            'num_attention_heads': 4,
-            'num_key_value_heads': 2,
-            'intermediate_size': 512,
-            'vocab_size': 1000,
-            'num_hidden_layers': 4,
-            'mamba_num_heads': 4,
-            'ssm_state_size': 16,
-            'expand': 2,
-            'n_groups': 1,
-            'conv_kernel': 4,
+            "model_type": "nemotron_h",
+            "hybrid_override_pattern": "M-M*",
+            "hidden_size": 256,
+            "num_attention_heads": 4,
+            "num_key_value_heads": 2,
+            "intermediate_size": 512,
+            "vocab_size": 1000,
+            "num_hidden_layers": 4,
+            "mamba_num_heads": 4,
+            "ssm_state_size": 16,
+            "expand": 2,
+            "n_groups": 1,
+            "conv_kernel": 4,
         }
         cfg = config_from_hf(hf_cfg)
         assert cfg.n_layers == 4

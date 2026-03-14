@@ -106,10 +106,7 @@ class ALiBi(nn.Module):
             Combined ALiBi bias + mask (1, H, T_q, T_k).
         """
         t_q = mask.shape[-2] if mask is not None else seq_len
-        t_k = (
-            mask.shape[-1] if mask is not None
-            else seq_len + cache_len
-        )
+        t_k = mask.shape[-1] if mask is not None else seq_len + cache_len
         dummy = mx.zeros((1, self.n_heads, t_q, t_k))
         return self._alibi(dummy, offset=cache_len, mask=mask)
 

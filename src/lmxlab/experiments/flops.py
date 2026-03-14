@@ -13,8 +13,10 @@ the O(d^2) and O(d * d_ff) matmul terms.
 from lmxlab.core.config import ModelConfig
 
 
-def _block_flops(model_config: ModelConfig, layer_idx: int,
-                 ) -> int:
+def _block_flops(
+    model_config: ModelConfig,
+    layer_idx: int,
+) -> int:
     """Compute forward-pass FLOPs for a single block.
 
     Args:
@@ -35,18 +37,18 @@ def _block_flops(model_config: ModelConfig, layer_idx: int,
 
     # Attention projections
     qkvo = (
-        2 * d * d          # Q projection
-        + 2 * d * kv_dim   # K projection
-        + 2 * d * kv_dim   # V projection
-        + 2 * d * d         # output projection
+        2 * d * d  # Q projection
+        + 2 * d * kv_dim  # K projection
+        + 2 * d * kv_dim  # V projection
+        + 2 * d * d  # output projection
     )
     # Attention scores and weighted sum
     attn_ops = (
-        2 * h * seq * hd    # Q·K^T
+        2 * h * seq * hd  # Q·K^T
         + 2 * h * seq * hd  # scores·V
     )
     # FFN: gated has 3 projections, standard has 2
-    ffn_mult = 3 if block.ffn == 'gated' else 2
+    ffn_mult = 3 if block.ffn == "gated" else 2
     ffn_flops = 2 * ffn_mult * d * d_ff
 
     return qkvo + attn_ops + ffn_flops
@@ -69,8 +71,7 @@ def estimate_flops_per_token(model_config: ModelConfig) -> int:
     """
     # Sum across layers (supports heterogeneous blocks)
     total = sum(
-        _block_flops(model_config, i)
-        for i in range(model_config.n_layers)
+        _block_flops(model_config, i) for i in range(model_config.n_layers)
     )
 
     # Unembedding (logits projection — matmul even if tied)
@@ -98,7 +99,4 @@ def estimate_flops_per_step(
     Returns:
         Total FLOPs per training step.
     """
-    return (
-        estimate_flops_per_token(model_config)
-        * batch_size * seq_len * 3
-    )
+    return estimate_flops_per_token(model_config) * batch_size * seq_len * 3
