@@ -17,6 +17,10 @@ for MHA. With typical values (512 + 64 = 576 vs 2*128*128 = 32768),
 this is a ~57x reduction.
 
 Reference: DeepSeek-V2 (Bi et al., 2024, arXiv:2405.04434)
+
+Cross-references:
+- deepseek-ai/DeepSeek-V2 modeling_deepseek.py
+- HuggingFace transformers modeling_deepseek_v3.py
 """
 
 import mlx.core as mx

@@ -17,9 +17,13 @@ This implementation uses the recurrent form, which is:
 - O(d^2) per token during inference (constant, no KV cache growth)
 - O(n * d^2) for training (sequential, no chunkwise parallelism)
 
-The recurrent form is simpler and sufficient for educational
+The recurrent form is simpler and sufficient for research
 purposes. Production implementations use chunkwise parallelism
 for training efficiency.
+
+Cross-references:
+- sustcsonglin/flash-linear-attention (GatedDeltaNet)
+- yzhangcs/gated-deltanet reference implementation
 """
 
 import mlx.core as mx

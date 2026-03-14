@@ -116,7 +116,31 @@ ruff format src/ tests/ recipes/         # Auto-format
   themselves in the appropriate registry.
 - **Simplicity bias.** When two approaches achieve similar results,
   prefer the simpler one.
-- **Educational clarity.** Comments should explain *why*, not just *what*.
+- **Clarity.** Comments should explain *why*, not just *what*.
+
+## Citations and attribution
+
+Every new building block (attention, FFN, position encoding, SSM,
+etc.) must cite its source paper with an arXiv ID in the module
+docstring:
+
+```python
+"""My new attention variant.
+
+Reference: Author (Year, arXiv:XXXX.XXXXX)
+"""
+```
+
+Code adapted from reference implementations must note the source:
+
+```python
+# Cross-references:
+# - org/repo filename.py (canonical implementation)
+# - HuggingFace transformers modeling_xxx.py
+```
+
+Use `Reference:` for the originating paper and `Cross-references:`
+for implementation sources consulted during development.
 
 ## Adding a new architecture
 
